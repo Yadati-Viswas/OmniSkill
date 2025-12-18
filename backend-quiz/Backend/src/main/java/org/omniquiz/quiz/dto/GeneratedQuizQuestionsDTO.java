@@ -1,4 +1,4 @@
-package org.omniquiz.generatequiz.dto;
+package org.omniquiz.quiz.dto;
 
 import java.util.List;
 
@@ -55,6 +55,7 @@ public class GeneratedQuizQuestionsDTO {
     }
 
     private String title;
+    private String refferal;
     private String question;
     private String code;
     private List<String> options;

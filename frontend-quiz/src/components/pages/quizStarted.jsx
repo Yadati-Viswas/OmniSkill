@@ -9,8 +9,11 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 export default function QuizStartedPage() {
     const location = useLocation();
     const { darkMode } = useDarkMode();
-    const { allQuestions } = location.state || {};
+    const generatedResponse = location.state?.generatedResponse || {};
+    const allQuestions = generatedResponse.questions || [];
+ 
     const [selectedAnswers, setSelectedAnswers] = useState({});
+    console.log("Generated Response:", generatedResponse);
     console.log("Received Questions:", allQuestions);
 
     const handleOptionClick = (questionIndex, optionIndex) => {
@@ -25,8 +28,8 @@ export default function QuizStartedPage() {
         const caluclatedScore = Object.keys(selectedAnswers).reduce((score, qIndex) => {
             const question = allQuestions[qIndex];
             const selectedOption = question.options[selectedAnswers[qIndex]];
-            console.log(`Q${parseInt(qIndex)+1}: Selected - ${selectedOption}, Correct - ${question.answer}`);
-            if (selectedOption === question.answer) {
+            console.log(`Q${parseInt(qIndex)+1}: Selected - ${selectedOption}, Correct - ${question.options[question.correctIndex]}`);
+            if (selectedOption === question.options[question.correctIndex]) {
                 return score + 1;
             }
             return score;

@@ -22,8 +22,8 @@ async function apiCall(method, endpoint, data = null, headers = {}) {
     }
 }
 
-async function getQuizQuestionsApi(category, difficulty, numberOfQuestions) {
-    return apiCall('POST', `/v1-api/quiz/generate-questions`, {
+async function getQuizQuestionsApi(category, difficulty, numberOfQuestions, quizRefferal = "") {
+    const requestBody = {
         prompt: `Generate ${numberOfQuestions} multiple-choice questions on ${category} with difficulty level ${difficulty}, covering core concepts. Output ONLY a valid JSON array with no additional text, metadata, or wrappers like "AssistantMessage". Do not include code blocks (e.g., \`\`\`json). The JSON must be strictly formatted as: [
   {
     "title": "Question 1: Topic",
@@ -34,8 +34,10 @@ async function getQuizQuestionsApi(category, difficulty, numberOfQuestions) {
     "explanation": "Detailed explanation here"
   }
 ]
-Ensure each question has exactly 4 options (a-d). In all string fields (especially "code" and "explanation"), represent newlines as \\n and do not use actual line breaks. Ensure the entire output is strictly valid JSON without any unescaped control characters.`
-    });
+Ensure each question has exactly 4 options (a-d). In all string fields (especially "code" and "explanation"), represent newlines as \\n and do not use actual line breaks. Ensure the entire output is strictly valid JSON without any unescaped control characters.`,
+        quizRefferal,
+    };
+    return apiCall('POST', `/v1-api/quiz/generate-questions`, requestBody);
 }
 
 async function singupUserApi(data) {

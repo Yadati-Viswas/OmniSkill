@@ -20,6 +20,7 @@ export default function StartQuizPage() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [selectedDifficulty, setSelectedDifficulty] = useState("");
+  const [quizRefferal, setQuizRefferal] = useState("");
   const [loading, setLoading] = useState(false);
   const [numberOfQuestions, setNumberOfQuestions] = useState(5);
   const Navigate = useNavigate();
@@ -36,17 +37,17 @@ export default function StartQuizPage() {
     }
     else setSelectedCategory(cat);
     setShowPopup(true);
-    setSelectedDifficulty(""); // reset difficulty
+    setSelectedDifficulty("");
   };
 
   const handleStartQuiz = async () => {
     setShowPopup(false);
     setLoading(true);
     alert(`Starting ${selectedCategory} quiz (${selectedDifficulty})`);
-    const response = await getQuizQuestionsApi(selectedCategory, selectedDifficulty, numberOfQuestions);
+    const response = await getQuizQuestionsApi(selectedCategory, selectedDifficulty, numberOfQuestions, quizRefferal);
     setLoading(false);
     console.log("API Response:", response.data);
-    Navigate('/quiz-started', { state: { allQuestions: response.data } });
+    Navigate('/quiz-started', { state: { generatedResponse: response.data } });
   };
 
   if(loading){
@@ -83,7 +84,7 @@ export default function StartQuizPage() {
                 shadow-md`}
               onClick={() => {if (!isAuthenticated) {
                     toast.error("You must be logged in to start a quiz.");
-                    Navigate("/login"); // Redirect to login page
+                    Navigate("/login");
                     return;
                   }handleCategoryClick(cat)}} >
               {cat}
@@ -141,6 +142,18 @@ export default function StartQuizPage() {
                   ))}
                 </div>
               </div>
+              <div className="flex flex-col mb-6">
+              <label className="text-xl font-bold px-1 mb-2">
+                Quiz Referral:
+              </label>
+              <input
+                type="text"
+                placeholder="Quiz Referral (optional)"
+                value={quizRefferal}
+                onChange={(e) => setQuizRefferal(e.target.value)}
+                className={`w-full p-3 rounded-lg border ${darkMode ? "bg-[#23272f] border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              />
+            </div>
               <div className="flex justify-end space-x-3">
                 <button
                   className={`px-4 py-2 rounded font-semibold ${darkMode ? "bg-indigo-600 text-white" : "bg-blue-600 text-white"}`}

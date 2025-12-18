@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { TrophyIcon} from "@heroicons/react/24/solid";
 import Layout from "../Layout";
+import { Link } from "react-router-dom";
 
 export default function OmniQuizPage({ darkMode }) {
     const topScorers = [
@@ -8,6 +9,7 @@ export default function OmniQuizPage({ darkMode }) {
       { name: "Bob Smith",   score: 92, quiz: "General Knowledge" },
       { name: "Charlie Lee", score: 89, quiz: "Science Quiz" },
     ];
+    const actionButtons = [{name:"Create Quiz",link:"/create-quiz"}, {name: "Join Quiz", link:"/join-quiz"}, {name:"Generate Quiz", link:"/start-quiz"}];
     return (
       <Layout>
         {/* intro */}
@@ -103,14 +105,18 @@ export default function OmniQuizPage({ darkMode }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
           className="flex justify-center space-x-8">
-          {["Start Quiz", "Create Quiz", "Join Quiz"].map((label) => (
-            <button key={label}
-              className={`${darkMode
+          {actionButtons.map((label) => (
+            <Link
+              key={label.name}
+              to={label.link}
+              className={`cursor-pointer
+                ${darkMode
                   ? "bg-indigo-600 hover:bg-indigo-700"
                   : "bg-blue-600 hover:bg-blue-700"}
-                  px-8 py-4 rounded-lg text-lg font-semibold transition`}>
-              {label}
-            </button>
+                px-8 py-4 rounded-lg text-lg font-semibold transition`}
+            >
+              {label.name}
+            </Link>
           ))}
         </motion.section>
       </Layout>
