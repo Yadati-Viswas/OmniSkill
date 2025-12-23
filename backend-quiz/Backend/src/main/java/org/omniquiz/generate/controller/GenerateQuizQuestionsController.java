@@ -31,7 +31,7 @@ public class GenerateQuizQuestionsController {
 
         String prompt = request.getPrompt();
         String referral = request.getReferral(); // Optional
-
+        System.out.println("Referral code"+referral);
         if (prompt == null || prompt.trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
@@ -55,14 +55,11 @@ public class GenerateQuizQuestionsController {
         System.out.println("All Questions generated size: "+questions.size());
         QuizDTO dto = new QuizDTO();
         dto.setTitle("Generated Quiz: " + prompt.substring(0, Math.min(20, prompt.length()))); // Auto-title
-        dto.setReferral(referral != null ? referral : generateUniqueReferral("GEN-" + System.currentTimeMillis()));
+        dto.setReferral(referral);
         dto.setQuestions(questions);
         dto.setType(Quiz.QuizType.GENERATED.name());
         QuizDTO saved = generateQuizQuestionsService.saveQuiz(dto, user);
         return ResponseEntity.ok(saved);
     }
 
-    private String generateUniqueReferral(String base) {
-        return base + "-" + Math.abs((int) System.currentTimeMillis() % 10000);
-    }
 }

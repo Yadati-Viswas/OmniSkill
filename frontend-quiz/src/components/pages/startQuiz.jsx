@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { customAlphabet } from 'nanoid';
 import Layout from "../Layout";
 import { useDarkMode } from "../../contexts/DarkModeContextProvider";
 import { getQuizQuestionsApi } from "../../apis/allApis";
@@ -43,8 +44,16 @@ export default function StartQuizPage() {
   const handleStartQuiz = async () => {
     setShowPopup(false);
     setLoading(true);
+    let finalReferral = quizRefferal?.trim();
+    if (!finalReferral) {
+        finalReferral = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 8)();
+        setQuizRefferal(finalReferral);
+        console.log("Generated Referral:", finalReferral);
+    }
+    const referral = finalReferral;
+    console.log("referral used:", referral);
     alert(`Starting ${selectedCategory} quiz (${selectedDifficulty})`);
-    const response = await getQuizQuestionsApi(selectedCategory, selectedDifficulty, numberOfQuestions, quizRefferal);
+    const response = await getQuizQuestionsApi(selectedCategory, selectedDifficulty, numberOfQuestions, referral);
     setLoading(false);
     console.log("API Response:", response.data);
     Navigate('/quiz-started', { state: { generatedResponse: response.data } });

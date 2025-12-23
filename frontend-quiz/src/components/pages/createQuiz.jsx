@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { customAlphabet } from 'nanoid';
 import Layout from "../Layout";
 import { useDarkMode } from "../../contexts/DarkModeContextProvider";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -38,32 +39,52 @@ export default function CreateQuizPage() {
   };
 
   const handleSubmit = async() => {
-    console.log(previewed);
     if(!previewed) {
-      alert("Please preview the quiz before submitting.");
+      toast.error("Please preview the quiz before submitting.");
       return;
     }
-    const quizData = {
-      title: quizTitle,
-      refferal: quizRefferal,
-      questions: questions.map(q => ({
-        question: q.question,
-        code: q.code,
-        explanation: q.explanation,
-        options: q.options,
-        correctIndex: q.correctIndex
-      }))
-    };
-    console.log("Quiz Data:", quizData);
-    const response = await createQuizApi(quizData);
-    if(response.status === 200) {
-      alert("Quiz created successfully!");
-    } else {
-      alert("Failed to create quiz: " + (response.data?.message || "Unknown error"));
+
+    try {
+      let finalReferral = quizRefferal?.trim();
+
+      if (!finalReferral) {
+        finalReferral = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 8)();
+        setQuizRefferal(finalReferral);
+        console.log("Generated Referral:", quizRefferal);
+      }
+      const quizData = {
+        title: quizTitle,
+        referral: quizRefferal,
+        questions: questions.map(q => ({
+          question: q.question,
+          code: q.code,
+          explanation: q.explanation,
+          options: q.options,
+          correctIndex: q.correctIndex
+        }))
+      };
+
+      console.log("Quiz Data:", quizData);
+      
+      const response = await createQuizApi(quizData);
+      
+      if(response.status === 200) {
+        toast.success("Quiz created successfully!");
+        setQuizTitle("");
+        setQuizRefferal("");
+        setQuestions([
+          { question: "", code: "", options: ["", "", "", ""], explanation: "", correctIndex: null }
+        ]);
+        setPreviewed(false);
+        setShowPreview(false);
+      } else {
+        toast.error("Failed to create quiz: " + (response.data?.message || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Error creating quiz:", error);
+      toast.error("An error occurred while creating the quiz. Please try again.");
     }
-    
-    alert("Quiz submitted! Check console for data.");
-  }
+  };
   const handlePreview = () => {
     if(quizTitle.trim() === "") {
       alert("Please enter quiz Title.");

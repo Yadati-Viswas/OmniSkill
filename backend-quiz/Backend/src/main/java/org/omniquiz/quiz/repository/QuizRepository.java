@@ -7,6 +7,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface QuizRepository extends JpaRepository<Quiz, Long> {
-    Optional<Quiz> findByReferralIgnoreCase(String referral);
+    Quiz findByReferral(String referral);
     List<Quiz> findByUserIdAndTypeOrderByCreatedAtDesc(Long userId, Quiz.QuizType type);
 }

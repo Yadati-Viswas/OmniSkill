@@ -31,7 +31,7 @@ export default function JoinQuizPage() {
       const response = await joinQuizApi(referralCode);
       console.log("Join Quiz API Response:", response.data);
       toast.success("Successfully joined the quiz!");
-      navigate("/quiz-started", { state: { allQuestions: response.data } });
+      navigate("/quiz-started", { state: { generatedResponse: response.data } });
     } catch (error) {
       console.error("Error joining quiz:", error);
       toast.error("Failed to join the quiz. Please check the referral code and try again.");

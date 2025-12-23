@@ -55,10 +55,18 @@ public class GeneratedQuizQuestionsDTO {
     }
 
     private String title;
-    private String refferal;
+    private String referral;
     private String question;
     private String code;
     private List<String> options;
     private String answer;
     private String explanation;
+
+    public String getReferral() {
+        return referral;
+    }
+
+    public void setReferral(String referral) {
+        this.referral = referral;
+    }
 }
