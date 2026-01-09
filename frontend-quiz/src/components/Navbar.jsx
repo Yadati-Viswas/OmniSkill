@@ -136,7 +136,7 @@ function Navbar({ darkMode, toggleDarkMode}) {
               { title: "Join a Quiz", desc: "Join an existing quiz", link: "/join-quiz" },
               { title: "Mock Interview", desc: "Start a mock interviews", link: "/start-interview" },
               { title: "Start UpSkilling", desc: "browse courses and start learning", link: "/start-courses" },
-              { title: "Start Coding", desc: "Coding assessments to upskill yourself", link: "/start-coding" },
+              { title: "Start Coding", desc: "Coding assessments to upskill yourself", link: "/problems" },
             ]} darkMode={darkMode} />
           <MegaMenuDropdown title="Products"
             items={[

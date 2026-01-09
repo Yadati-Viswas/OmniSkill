@@ -60,7 +60,18 @@ async function postGoogleApi(token) {
   return apiCall('POST', '/users/google-login', { token });
 }
 
+async function getAllProblemsApi(page, size, search = "", tag = "", sortBy = "") {
+    const params = new URLSearchParams({ page, size });
+    if (search) params.append("search", search);
+    if (tag) params.append("tag", tag);
+    if (sortBy) params.append("sort", sortBy);
+    return apiCall('GET', `/v1-api/problems?${params.toString()}`);
+}
+
+async function getProblemByIdApi(id) {
+    return apiCall('GET', `/v1-api/problems/${id}`);
+}
 
 export { getQuizQuestionsApi ,singupUserApi, loginUserApi, postGoogleApi, createQuizApi, 
-    joinQuizApi
+    joinQuizApi, getAllProblemsApi, getProblemByIdApi
  };

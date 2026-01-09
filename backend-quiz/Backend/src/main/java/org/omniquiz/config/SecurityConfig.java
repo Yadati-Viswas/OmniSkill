@@ -37,6 +37,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/v1-api/auth/**").permitAll()
                         .requestMatchers("/v1-api/quiz/**").authenticated()
+                        .requestMatchers("/v1-api/problems/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

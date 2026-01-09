@@ -10,6 +10,8 @@ import LoginPage from "./components/pages/login";
 import OmniQuizPage from "./components/pages/omniQuiz";
 import JoinQuizPage from "./components/pages/joinQuiz";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ProblemsPage from "./components/pages/problemsPage";
+import SolveProblemPage from "./components/pages/solveProblemPage";
 import { DarkModeContextProvider } from "./contexts/DarkModeContextProvider";
 import { AuthProvider } from "./contexts/AuthContext";
 import {ToastContainer, toast} from "react-toastify";
@@ -30,6 +32,8 @@ export default function App() {
               <Route path="/login" element={<LoginPage/>} />
               <Route path="/omni-quiz" element={<OmniQuizPage/>} />
               <Route path="/join-quiz" element={<JoinQuizPage/>} />
+              <Route path="/problems" element={<ProblemsPage/>} />
+              <Route path="/problems/:id" element={<SolveProblemPage/>} />
               {/*<Route path="*" component={NotFoundPage} /> */}
             </Routes>
           </Router>
