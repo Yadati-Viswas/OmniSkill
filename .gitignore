@@ -3,3 +3,4 @@ backend-quiz/.idea
 .idea
 .vscode
 .DS_Store
+frontend-quiz/.env
