@@ -2,6 +2,7 @@ import axios, { AxiosRequestConfig, AxiosResponse, Method } from "axios";
 import { LoginCredentials, SignupData, GeneratedQuizResponse, Problem, Quiz } from "../types";
 
 const baseUrl = `http://localhost:8080`;
+const deployUrl = `https://omniskill.onrender.com`;
 
 interface QuizGenerationRequest {
     prompt: string;
@@ -14,7 +15,7 @@ async function apiCall<T>(
     data: unknown = null,
     headers: Record<string, string> = {}
 ): Promise<AxiosResponse<T>> {
-    const url = `${baseUrl}${endpoint}`;
+    const url = `${deployUrl}${endpoint}`;
     const token = localStorage.getItem('token');
     const defaultHeaders: Record<string, string> = {
         'Content-Type': 'application/json',

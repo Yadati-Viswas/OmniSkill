@@ -45,19 +45,26 @@ const LoginPage: React.FC = () => {
     };
 
     const onSubmit: SubmitHandler<LoginCredentials> = async (data) => {
-        const response = await loginUserApi(data);
-        if (response.status === 200) {
-            localStorage.setItem('token', response.data.token);
-            localStorage.setItem('user', JSON.stringify(response.data.user));
-            console.log("User: ", response.data.user, "Token: ", response.data.token);
-            const userData: User = {
-                username: response.data.user.username,
-                email: response.data.user.email
-            };
-            login(userData, response.data.token);
-            navigate("/");
-        } else {
-            alert("Login failed: Unknown error");
+        try {
+            const response = await loginUserApi(data);
+            console.log("DEBUG: Full Response Data:", JSON.stringify(response.data, null, 2));
+            console.log("DEBUG: Keys in Data:", Object.keys(response.data || {}));
+
+            if (response.status === 200 && response.data && response.data.user) {
+                localStorage.setItem('token', response.data.token);
+                localStorage.setItem('user', JSON.stringify(response.data.user));
+                const userData: User = {
+                    username: response.data.user.username,
+                    email: response.data.user.email
+                };
+                login(userData, response.data.token);
+                navigate("/");
+            } else {
+                alert(`Login failed. Status: ${response.status}. Data keys: ${Object.keys(response.data || {}).join(", ")}`);
+            }
+        } catch (error) {
+            console.error("Login error:", error);
+            alert("Login failed: Unknown error (check console)");
         }
     };
 

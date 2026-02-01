@@ -2,6 +2,7 @@ package org.omniquiz.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -33,6 +34,7 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())).csrf().disable()
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/v1-api/auth/**").permitAll()
                         .requestMatchers("/v1-api/quiz/**").authenticated()
                         .requestMatchers("/v1-api/problems/**").permitAll()
@@ -50,7 +52,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        configuration.setAllowedOrigins(List.of("https://omniskill-ui.onrender.com", "http://localhost:3000"));
         configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS", "PUT", "DELETE")); // Add all methods you use
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type")); // Be specific
         configuration.setAllowCredentials(true);
