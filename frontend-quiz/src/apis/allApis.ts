@@ -9,6 +9,12 @@ interface QuizGenerationRequest {
     referral: string;
 }
 
+const isValidToken = (token: string | null): token is string => {
+    if (token === null) return false;
+    const trimmed = token.trim();
+    return trimmed !== "" && trimmed !== "undefined" && trimmed !== "null";
+};
+
 async function apiCall<T>(
     method: Method,
     endpoint: string,
@@ -17,9 +23,10 @@ async function apiCall<T>(
 ): Promise<AxiosResponse<T>> {
     const url = `${deployUrl}${endpoint}`;
     const token = localStorage.getItem('token');
+    const shouldAttachToken = isValidToken(token) && !endpoint.startsWith("/v1-api/auth/");
     const defaultHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
+        ...(shouldAttachToken ? { Authorization: `Bearer ${token}` } : {}),
     };
     const config: AxiosRequestConfig = {
         method,

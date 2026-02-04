@@ -26,7 +26,7 @@ const SignupPage: React.FC = () => {
         console.log("Signup data:", data);
         const response = await singupUserApi(data);
         console.log("Signup API response:", response);
-        if (response.status === 201) {
+        if (response.status === 201 || response.status === 200) {
             navigate("/login");
             alert("Signup submitted (check console)");
         } else {

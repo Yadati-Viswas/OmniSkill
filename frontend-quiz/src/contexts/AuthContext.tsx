@@ -41,7 +41,10 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
         // 2. FIX: Log exactly what is missing so you aren't guessing
         if (!isValid(token) || !isValid(userData)) {
             console.log("No valid session found (Token or User missing).");
-            // Do not throw error, just stay logged out.
+            // Clean up invalid/placeholder values so we don't send bad tokens later.
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('tokenExpiration');
             return;
         }
 
