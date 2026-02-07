@@ -23,6 +23,9 @@
     "noFallthroughCasesInSwitch": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
+    "types": [
+      "vitest/globals"
+    ],
     /* Paths */
     "baseUrl": ".",
     "paths": {

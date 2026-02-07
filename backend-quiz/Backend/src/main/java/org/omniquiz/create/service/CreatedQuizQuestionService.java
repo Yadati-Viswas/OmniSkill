@@ -8,23 +8,28 @@ import org.omniquiz.quiz.repository.QuizRepository;
 import org.omniquiz.user.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 
 @Service
 public class CreatedQuizQuestionService {
 
+    private static final Logger logger = LoggerFactory.getLogger(CreatedQuizQuestionService.class);
+
     @Autowired
     private QuizRepository quizRepository;
 
     @Transactional
     public QuizDTO saveQuiz(QuizDTO dto, User user) {
+        logger.info("Saving created quiz: {}", dto.getTitle());
         Quiz quiz = new Quiz();
         quiz.setTitle(dto.getTitle());
         quiz.setReferral(dto.getReferral());
         quiz.setUser(user);
         quiz.setCreatedAt(LocalDateTime.now());
-        quiz.setType(Quiz.QuizType.CREATED);  // Set for create
+        quiz.setType(Quiz.QuizType.CREATED); // Set for create
 
         for (QuizDTO.QuestionDTO qDto : dto.getQuestions()) {
             QuizQuestion q = new QuizQuestion();
@@ -38,7 +43,7 @@ public class CreatedQuizQuestionService {
         }
 
         quiz = quizRepository.save(quiz);
-        return toQuizDTO(quiz);  // Reuse same mapper as generate
+        return toQuizDTO(quiz); // Reuse same mapper as generate
     }
 
     private QuizDTO toQuizDTO(Quiz quiz) {

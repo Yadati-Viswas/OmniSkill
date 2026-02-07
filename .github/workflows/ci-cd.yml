@@ -30,6 +30,8 @@ jobs:
       SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/testdb
       SPRING_DATASOURCE_USERNAME: testuser
       SPRING_DATASOURCE_PASSWORD: testpass
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 21
@@ -47,6 +49,10 @@ jobs:
         run: mvn clean package
       - name: Run tests
         run: mvn test
+      - name: OWASP Dependency Check
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: mvn -DskipTests org.owasp:dependency-check-maven:check
 
   frontend:
     runs-on: ubuntu-latest
@@ -63,5 +69,9 @@ jobs:
           cache-dependency-path: frontend-quiz/package-lock.json
       - name: Install dependencies
         run: npm ci
+      - name: Run tests
+        run: npm run test
       - name: Build
+        env:
+          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
         run: npm run build

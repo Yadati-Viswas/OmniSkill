@@ -13,6 +13,7 @@
     "@mui/material": "^7.2.0",
     "@react-oauth/google": "^0.12.2",
     "@tanstack/react-query": "^5.83.0",
+    "@sentry/react": "^8.35.0",
     "axios": "^1.12.2",
     "framer-motion": "^12.23.11",
     "monaco-editor": "^0.55.1",
@@ -29,6 +30,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "browserslist": {
@@ -50,9 +52,14 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react": "^4.3.1",
     "baseline-browser-mapping": "^2.9.19",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "jsdom": "^24.1.1",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",
-    "vite": "^5.3.1"
+    "vite": "^5.3.1",
+    "vitest": "^2.1.9"
   },
   "overrides": {
     "yaml": "2.8.1"

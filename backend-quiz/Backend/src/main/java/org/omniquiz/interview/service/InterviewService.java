@@ -4,6 +4,8 @@ import org.omniquiz.interview.model.Interview;
 import org.omniquiz.interview.repository.InterviewRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Optional;
@@ -11,10 +13,13 @@ import java.util.Optional;
 @Service
 public class InterviewService {
 
+    private static final Logger logger = LoggerFactory.getLogger(InterviewService.class);
+
     @Autowired
     private InterviewRepository interviewRepository;
 
     public Interview saveInterview(Interview interview) {
+        logger.info("Saving interview for user: {}", interview.getUserId());
         return interviewRepository.save(interview);
     }
 

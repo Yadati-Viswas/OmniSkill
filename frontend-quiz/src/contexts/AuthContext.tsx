@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, PropsWithChildren } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, PropsWithChildren } from 'react';
 import { NavigateFunction, useNavigate } from 'react-router-dom';
 import { User, AuthContextType } from '../types';
 
@@ -8,7 +8,7 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
     const [user, setUser] = useState<User | null>(null);
 
-    const login = (userData: User, authToken: string): void => {
+    const login = useCallback((userData: User, authToken: string): void => {
         console.log("Logging in user:", userData);
 
         setIsAuthenticated(true);
@@ -18,16 +18,16 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(userData));
         const oneHourFromNow = Date.now() + 3600000;
         localStorage.setItem('tokenExpiration', String(oneHourFromNow));
-    };
+    }, []);
 
-    const logout = (navigate?: NavigateFunction): void => {
+    const logout = useCallback((navigate?: NavigateFunction): void => {
         setIsAuthenticated(false);
         setUser(null);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('tokenExpiration');
         if (navigate) navigate('/');
-    };
+    }, []);
 
     useEffect(() => {
         const token = localStorage.getItem('token');

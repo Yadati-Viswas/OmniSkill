@@ -12,6 +12,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -19,14 +21,30 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+
     private final AuthenticationProvider authenticationProvider;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
+    private final RequestIdFilter requestIdFilter;
+
+    // Dependencies needed for manual filter instantiation
+    private final JwtService jwtService;
+    private final org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
+    private final org.springframework.web.servlet.HandlerExceptionResolver handlerExceptionResolver;
 
     public SecurityConfig(
-            JwtAuthenticationFilter jwtAuthenticationFilter,
-            AuthenticationProvider authenticationProvider) {
+            AuthenticationProvider authenticationProvider,
+            RateLimitFilter rateLimitFilter,
+            RequestIdFilter requestIdFilter,
+            JwtService jwtService,
+            org.springframework.security.core.userdetails.UserDetailsService userDetailsService,
+            org.springframework.web.servlet.HandlerExceptionResolver handlerExceptionResolver) {
         this.authenticationProvider = authenticationProvider;
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.rateLimitFilter = rateLimitFilter;
+        this.requestIdFilter = requestIdFilter;
+        this.jwtService = jwtService;
+        this.userDetailsService = userDetailsService;
+        this.handlerExceptionResolver = handlerExceptionResolver;
     }
 
     @Bean
@@ -37,14 +55,19 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/v1-api/auth/**").permitAll()
                         .requestMatchers("/v1-api/quiz/**").authenticated()
+                        .requestMatchers("/v1-api/code/**").authenticated()
                         .requestMatchers("/v1-api/problems/**").permitAll()
                         .requestMatchers("/v1-api/interviews/**").authenticated()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(requestIdFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new JwtAuthenticationFilter(jwtService, userDetailsService, handlerExceptionResolver),
+                        UsernamePasswordAuthenticationFilter.class);
 
+        logger.info("Security Filter Chain configured");
         return http.build();
     }
 
@@ -54,7 +77,8 @@ public class SecurityConfig {
 
         configuration.setAllowedOrigins(List.of("https://omniskill-ui.onrender.com", "http://localhost:3000"));
         configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS", "PUT", "DELETE")); // Add all methods you use
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type")); // Be specific
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Request-ID")); // Be specific
+        configuration.setExposedHeaders(List.of("X-Request-ID"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

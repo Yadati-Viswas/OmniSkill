@@ -6,7 +6,7 @@ import org.omniquiz.quiz.dto.QuizDTO;
 import org.omniquiz.quiz.model.Quiz;
 import org.omniquiz.quiz.model.QuizQuestion;
 import org.omniquiz.quiz.repository.QuizRepository;
-import org.omniquiz.quiz.dto.GeneratedQuizQuestionsDTO;  // Legacy for Gemini response
+import org.omniquiz.quiz.dto.GeneratedQuizQuestionsDTO; // Legacy for Gemini response
 import org.omniquiz.user.model.User;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,12 +19,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class GenerateQuizQuestionsService {
 
+    private static final Logger logger = LoggerFactory.getLogger(GenerateQuizQuestionsService.class);
+
     @Autowired
-    private QuizRepository quizRepository;  // Unified repo
+    private QuizRepository quizRepository; // Unified repo
 
     private final ChatModel chatModel;
     private final ObjectMapper mapper;
@@ -37,13 +41,13 @@ public class GenerateQuizQuestionsService {
 
     public List<QuizDTO.QuestionDTO> generateAllQuestions(String prompt, int totalQuestions) {
         int batchSize = 5;
-        int totalBatches = (totalQuestions + batchSize - 1) / batchSize;  // Ceiling division
+        int totalBatches = (totalQuestions + batchSize - 1) / batchSize; // Ceiling division
 
         List<CompletableFuture<List<GeneratedQuizQuestionsDTO>>> futures = new ArrayList<>();
         for (int i = 0; i < totalBatches; i++) {
             int currentBatchSize = Math.min(batchSize, totalQuestions - i * batchSize);
             String batchPrompt = prompt.replaceFirst("\\d+", String.valueOf(currentBatchSize));
-            System.out.println("Batch Prompt: " + batchPrompt);
+            logger.info("Batch Prompt generated for batch {}", i + 1);
             futures.add(CompletableFuture.supplyAsync(() -> generateContent(batchPrompt)));
         }
 
@@ -55,7 +59,8 @@ public class GenerateQuizQuestionsService {
 
         if (allGenerated.size() < totalQuestions) {
             int missing = totalQuestions - allGenerated.size();
-            System.out.println("Generated " + allGenerated.size() + ", missing " + missing + " — retrying...");
+            logger.warn("Generated {} questions, missing {} - retrying not implemented yet.", allGenerated.size(),
+                    missing);
         }
 
         return allGenerated.stream().map(this::toQuestionDTO).collect(Collectors.toList());
@@ -67,16 +72,17 @@ public class GenerateQuizQuestionsService {
         q.setCode(genQ.getCode());
         q.setExplanation(genQ.getExplanation());
         q.setOptions(genQ.getOptions());
-        q.setCorrectIndex(mapAnswerToIndex(genQ.getAnswer(), genQ.getOptions()));  // Map "b" → 1
+        q.setCorrectIndex(mapAnswerToIndex(genQ.getAnswer(), genQ.getOptions())); // Map "b" → 1
         return q;
     }
 
     private Integer mapAnswerToIndex(String answer, List<String> options) {
-        if (answer == null || options == null) return null;
+        if (answer == null || options == null)
+            return null;
         // Assume answer like "b" or "Option 2"
         String lowerAnswer = answer.toLowerCase().trim();
         if (lowerAnswer.matches("[a-d]")) {
-            return lowerAnswer.charAt(0) - 'a';  // a→0, b→1, etc.
+            return lowerAnswer.charAt(0) - 'a'; // a→0, b→1, etc.
         }
         // Fallback: find matching text
         return options.indexOf(answer);
@@ -89,10 +95,11 @@ public class GenerateQuizQuestionsService {
 
         try {
             String rawResponse = chatModel.call(prompt);
-            System.out.println("Raw Response: " + rawResponse);
-            return mapper.readValue(rawResponse, mapper.getTypeFactory().constructCollectionType(List.class, GeneratedQuizQuestionsDTO.class));
+            logger.debug("Raw Response from AI length: {}", rawResponse != null ? rawResponse.length() : 0);
+            return mapper.readValue(rawResponse,
+                    mapper.getTypeFactory().constructCollectionType(List.class, GeneratedQuizQuestionsDTO.class));
         } catch (Exception e) {
-            System.out.println("Error during generation: " + e.getMessage());
+            logger.error("Error during generation: ", e);
             return Collections.emptyList();
         }
     }

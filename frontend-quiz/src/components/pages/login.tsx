@@ -34,7 +34,7 @@ const LoginPage: React.FC = () => {
                 email: response.data.email
             };
             login(userData, response.data.token);
-            navigate('/');
+            navigate('/dashboard');
         } else {
             alert("Login failed");
         }
@@ -58,7 +58,7 @@ const LoginPage: React.FC = () => {
                     email: response.data.user.email
                 };
                 login(userData, response.data.token);
-                navigate("/");
+                navigate("/dashboard");
             } else {
                 alert(`Login failed. Status: ${response.status}. Data keys: ${Object.keys(response.data || {}).join(", ")}`);
             }

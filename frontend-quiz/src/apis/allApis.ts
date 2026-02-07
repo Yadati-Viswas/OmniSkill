@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig, AxiosResponse, Method } from "axios";
-import { LoginCredentials, SignupData, GeneratedQuizResponse, Problem, Quiz } from "../types";
+import { LoginCredentials, SignupData, GeneratedQuizResponse, Problem, Quiz, CodeExecutionRequest, CodeExecutionResponse, CodeSubmissionRequest, CodeSubmissionResponse } from "../types";
+import { logger } from "../utils/logger";
 
 const baseUrl = `http://localhost:8080`;
 const deployUrl = `https://omniskill.onrender.com`;
@@ -15,17 +16,26 @@ const isValidToken = (token: string | null): token is string => {
     return trimmed !== "" && trimmed !== "undefined" && trimmed !== "null";
 };
 
+const createRequestId = (): string => {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+        return crypto.randomUUID();
+    }
+    return `req_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+};
+
 async function apiCall<T>(
     method: Method,
     endpoint: string,
     data: unknown = null,
     headers: Record<string, string> = {}
 ): Promise<AxiosResponse<T>> {
-    const url = `${deployUrl}${endpoint}`;
+    const url = `${baseUrl}${endpoint}`;
+    const requestId = createRequestId();
     const token = localStorage.getItem('token');
     const shouldAttachToken = isValidToken(token) && !endpoint.startsWith("/v1-api/auth/");
     const defaultHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
+        'X-Request-ID': requestId,
         ...(shouldAttachToken ? { Authorization: `Bearer ${token}` } : {}),
     };
     const config: AxiosRequestConfig = {
@@ -38,11 +48,15 @@ async function apiCall<T>(
         const start = performance.now();
         const response = await axios(config);
         const end = performance.now();
-        console.log(`API call to ${endpoint} took ${(end - start).toFixed(2)} ms`);
-        console.log("API Response:", response.data);
+        logger.info("API response", {
+            endpoint,
+            requestId,
+            status: response.status,
+            durationMs: Number((end - start).toFixed(2)),
+        });
         return response;
     } catch (error) {
-        console.error("API call error:", error);
+        logger.error("API call error", { endpoint, requestId, error });
         throw error;
     }
 }
@@ -145,6 +159,14 @@ async function getInterviewByIdApi(id: string): Promise<AxiosResponse<InterviewS
     return apiCall<InterviewSession>('GET', `/v1-api/interviews/${id}`);
 }
 
+async function executeCodeApi(payload: CodeExecutionRequest): Promise<AxiosResponse<CodeExecutionResponse>> {
+    return apiCall<CodeExecutionResponse>('POST', `/v1-api/code/execute`, payload);
+}
+
+async function submitCodeApi(payload: CodeSubmissionRequest): Promise<AxiosResponse<CodeSubmissionResponse>> {
+    return apiCall<CodeSubmissionResponse>('POST', `/v1-api/code/submit`, payload);
+}
+
 export {
     getQuizQuestionsApi,
     singupUserApi,
@@ -156,5 +178,7 @@ export {
     getProblemByIdApi,
     saveInterviewTranscriptApi,
     getInterviewHistoryApi,
-    getInterviewByIdApi
+    getInterviewByIdApi,
+    executeCodeApi,
+    submitCodeApi
 };

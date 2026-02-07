@@ -115,6 +115,16 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>7.4</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-core</artifactId>
+            <version>8.16.1</version>
+        </dependency>
 
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -130,6 +140,16 @@
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
             <version>0.11.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
         </dependency>
 
     </dependencies>
@@ -158,6 +178,17 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>11.1.0</version>
+                <configuration>
+                    <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
+                    <nvdApiDelay>16000</nvdApiDelay>
+                    <failBuildOnCVSS>7</failBuildOnCVSS>
+                    <format>HTML</format>
                 </configuration>
             </plugin>
         </plugins>

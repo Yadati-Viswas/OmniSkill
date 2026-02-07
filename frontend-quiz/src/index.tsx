@@ -3,6 +3,15 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import * as Sentry from '@sentry/react';
+
+if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
+    Sentry.init({
+        dsn: import.meta.env.VITE_SENTRY_DSN,
+        tracesSampleRate: 0.1,
+        environment: import.meta.env.MODE,
+    });
+}
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Failed to find the root element');

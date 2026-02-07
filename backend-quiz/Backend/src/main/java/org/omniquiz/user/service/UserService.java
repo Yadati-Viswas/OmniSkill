@@ -1,13 +1,10 @@
 package org.omniquiz.user.service;
 
 import org.omniquiz.user.dto.LoginRequestDTO;
-import org.omniquiz.user.dto.LoginResponseDTO;
 import org.omniquiz.user.dto.SignupRequestDTO;
 import org.omniquiz.user.dto.SignupResponseDTO;
 import org.omniquiz.user.model.User;
 import org.omniquiz.user.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,22 +21,20 @@ public class UserService {
 
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
 
-    private final BCryptPasswordEncoder passwordBcyrpt = new BCryptPasswordEncoder();
-
-    public UserService(AuthenticationManager authenticationManager) {
+    public UserService(UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            AuthenticationManager authenticationManager) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
     }
 
     public SignupResponseDTO signup(SignupRequestDTO request) {
+        log.info("Processing signup request");
         // Validate mandatory fields
         if (request.getUsername() == null || request.getEmail() == null ||
                 request.getPassword() == null || request.getConfirmPassword() == null) {
@@ -70,11 +65,12 @@ public class UserService {
                 passwordEncoder.encode(request.getPassword()));
 
         User savedUser = userRepository.save(user);
+        log.info("User registered successfully. ID: {}", savedUser.getId());
         return new SignupResponseDTO(true, "Signup successful", savedUser.getId());
     }
 
     public User login(LoginRequestDTO request) {
-        log.info("LOGIN ATTEMPT START - identifier: '{}'", request.getIdentifier());
+        log.info("LOGIN ATTEMPT START");
 
         if (request.getIdentifier() == null || request.getPassword() == null) {
             log.warn("Missing identifier or password");
@@ -82,14 +78,14 @@ public class UserService {
         }
 
         try {
-            log.debug("Creating authentication token for: '{}'", request.getIdentifier());
+            log.debug("Creating authentication token");
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                     request.getIdentifier(), request.getPassword());
 
             log.debug("Calling authenticationManager.authenticate()...");
             Authentication authenticated = authenticationManager.authenticate(authToken);
 
-            log.info("Authentication SUCCESS for principal: {}", authenticated.getName());
+            log.info("Authentication SUCCESS");
 
             log.debug("Loading user after successful auth...");
             User user = userRepository.findByUsernameOrEmail(request.getIdentifier(), request.getIdentifier())
@@ -101,23 +97,23 @@ public class UserService {
                 return null;
             }
 
-            log.info("LOGIN SUCCESS - user: {}, email: {}", user.getUsername(), user.getEmail());
+            log.info("LOGIN SUCCESS - userId: {}", user.getId());
             return user;
 
         } catch (BadCredentialsException e) {
-            log.warn("LOGIN FAILED - BadCredentialsException: Invalid password for '{}'", request.getIdentifier());
+            log.warn("LOGIN FAILED - BadCredentialsException");
             return null;
         } catch (UsernameNotFoundException e) {
-            log.warn("LOGIN FAILED - UsernameNotFoundException: User not found '{}'", request.getIdentifier());
+            log.warn("LOGIN FAILED - UsernameNotFoundException");
             return null;
         } catch (AuthenticationException e) {
             log.error("LOGIN FAILED - AuthenticationException: {}", e.getMessage(), e);
             return null;
         } catch (Exception e) {
-            log.error("LOGIN FAILED - Unexpected exception for '{}': {}", request.getIdentifier(), e.getMessage(), e);
+            log.error("LOGIN FAILED - Unexpected exception: {}", e.getMessage(), e);
             return null;
         } finally {
-            log.info("LOGIN ATTEMPT END for '{}'", request.getIdentifier());
+            log.info("LOGIN ATTEMPT END");
         }
     }
 }

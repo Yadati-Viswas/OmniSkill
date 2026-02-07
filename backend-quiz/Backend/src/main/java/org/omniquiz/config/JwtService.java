@@ -14,9 +14,12 @@ import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class JwtService {
+    private static final Logger logger = LoggerFactory.getLogger(JwtService.class);
     @Value("${security.jwt.secret-key}")
     private String secretKey;
 
@@ -60,7 +63,11 @@ public class JwtService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        boolean isValid = (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        if (!isValid) {
+            logger.warn("Invalid token");
+        }
+        return isValid;
     }
 
     private boolean isTokenExpired(String token) {

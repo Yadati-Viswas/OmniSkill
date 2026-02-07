@@ -142,6 +142,45 @@ export interface Language {
     name: string;
 }
 
+export interface CodeExecutionRequest {
+    language: string;
+    sourceCode: string;
+    stdin?: string;
+}
+
+export interface CodeExecutionResponse {
+    stdout?: string;
+    stderr?: string;
+    compileOutput?: string;
+    time?: string;
+    memory?: number;
+    status?: {
+        id?: number;
+        description?: string;
+    };
+}
+
+export interface CodeSubmissionRequest {
+    language: string;
+    sourceCode: string;
+    problemId: number;
+}
+
+export interface CodeSubmissionResult {
+    index: number;
+    passed: boolean;
+    expected?: string;
+    actual?: string;
+    error?: string;
+}
+
+export interface CodeSubmissionResponse {
+    allPassed: boolean;
+    passedCount: number;
+    totalCount: number;
+    results: CodeSubmissionResult[];
+}
+
 // Interview types
 export type ExperienceLevel = 'Entry' | 'Mid' | 'Senior' | 'Lead';
 

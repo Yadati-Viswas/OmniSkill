@@ -13,9 +13,8 @@ import {
 import { Link } from "react-router-dom";
 import { useAuth, useAuthNavigate } from '../contexts/AuthContext';
 import { NavbarProps, MenuItem } from '../types';
-// Dashboard icons are served from public folder - use absolute paths
 const DashboardIcon = "/dashboard-dark.png";
-const DashboardIconLight = "/dashboard-dark.png"; // Using same icon until light version is added
+const DashboardIconLight = "/dashboard.png";
 
 interface ProfileDropdownProps {
     darkMode: boolean;

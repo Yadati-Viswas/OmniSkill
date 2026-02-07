@@ -10,6 +10,7 @@ import LoginPage from "./components/pages/login";
 import OmniQuizPage from "./components/pages/omniQuiz";
 import JoinQuizPage from "./components/pages/joinQuiz";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
 import ProblemsPage from "./components/pages/problemsPage";
 import SolveProblemPage from "./components/pages/solveProblemPage";
 import StartInterviewPage from "./components/pages/startInterview";
@@ -27,8 +28,8 @@ const AppRoutes: React.FC = () => {
             <Route path="/start-quiz" element={<StartQuizPage />} />
             <Route path="/create-quiz" element={<ProtectedRoute><CreateQuizPage /></ProtectedRoute>} />
             <Route path="/quiz-started" element={<QuizStartedPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
+            <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/omni-quiz" element={<OmniQuizPage darkMode={darkMode} />} />
             <Route path="/join-quiz" element={<JoinQuizPage />} />
             <Route path="/problems" element={<ProblemsPage />} />

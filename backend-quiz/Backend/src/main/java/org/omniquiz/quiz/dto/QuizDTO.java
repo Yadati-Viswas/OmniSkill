@@ -1,7 +1,10 @@
 package org.omniquiz.quiz.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -16,6 +19,7 @@ public class QuizDTO {
     private String referral;
 
     @NotEmpty(message = "At least one question is required")
+    @Valid
     private List<QuestionDTO> questions;
 
     private Long id;
@@ -36,7 +40,8 @@ public class QuizDTO {
         @Size(min = 2, max = 6, message = "Options must be 2–6")
         private List<String> options;
 
-        @NotBlank
+        @NotNull
+        @Min(0)
         private Integer correctIndex;  // Unified: 0 for first option, etc.
     }
 }
