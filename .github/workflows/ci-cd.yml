@@ -52,7 +52,7 @@ jobs:
       - name: OWASP Dependency Check
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: mvn -DskipTests org.owasp:dependency-check-maven:check
+        run: mvn -DskipTests org.owasp:dependency-check-maven:purge org.owasp:dependency-check-maven:check
 
   frontend:
     runs-on: ubuntu-latest
