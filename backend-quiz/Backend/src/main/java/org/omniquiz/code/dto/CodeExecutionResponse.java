@@ -7,6 +7,7 @@ public class CodeExecutionResponse {
     private String stderr;
     @JsonProperty("compile_output")
     private String compileOutput;
+    private String message;
     private String time;
     private Integer memory;
     private Status status;
@@ -33,6 +34,14 @@ public class CodeExecutionResponse {
 
     public void setCompileOutput(String compileOutput) {
         this.compileOutput = compileOutput;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
     }
 
     public String getTime() {

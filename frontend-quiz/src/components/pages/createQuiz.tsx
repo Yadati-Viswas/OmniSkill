@@ -2,7 +2,6 @@ import React, { useState, ChangeEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { customAlphabet } from 'nanoid';
 import Layout from "../Layout";
-import { useDarkMode } from "../../contexts/DarkModeContextProvider";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { createQuizApi } from "../../apis/allApis";
@@ -17,7 +16,6 @@ interface QuestionForm {
 }
 
 const CreateQuizPage: React.FC = () => {
-    const { darkMode } = useDarkMode();
     const [quizTitle, setQuizTitle] = useState<string>("");
     const [quizRefferal, setQuizRefferal] = useState<string>("");
     const [questions, setQuestions] = useState<QuestionForm[]>([
@@ -27,11 +25,15 @@ const CreateQuizPage: React.FC = () => {
     const [previewed, setPreviewed] = useState<boolean>(false);
 
     const handleAddQuestion = (): void => {
-        setQuestions([...questions, { question: "", code: "", options: ["", "", "", ""], explanation: "", correctIndex: null }]);
+        setQuestions([
+            ...questions,
+            { question: "", code: "", options: ["", "", "", ""], explanation: "", correctIndex: null }
+        ]);
     };
 
     const handleQuestionChange = (index: number, field: string, value: string): void => {
         const updatedQuestions = [...questions];
+
         if (field === "question") {
             updatedQuestions[index].question = value;
         } else if (field === "code") {
@@ -44,6 +46,7 @@ const CreateQuizPage: React.FC = () => {
         } else if (field === "correctIndex") {
             updatedQuestions[index].correctIndex = parseInt(value, 10);
         }
+
         setQuestions(updatedQuestions);
     };
 
@@ -59,12 +62,12 @@ const CreateQuizPage: React.FC = () => {
             if (!finalReferral) {
                 finalReferral = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 8)();
                 setQuizRefferal(finalReferral);
-                console.log("Generated Referral:", quizRefferal);
             }
+
             const quizData = {
                 title: quizTitle,
                 referral: finalReferral,
-                questions: questions.map(q => ({
+                questions: questions.map((q) => ({
                     question: q.question,
                     code: q.code,
                     explanation: q.explanation,
@@ -73,17 +76,13 @@ const CreateQuizPage: React.FC = () => {
                 }))
             };
 
-            console.log("Quiz Data:", quizData);
-
             const response = await createQuizApi(quizData);
 
             if (response.status === 200) {
                 toast.success("Quiz created successfully!");
                 setQuizTitle("");
                 setQuizRefferal("");
-                setQuestions([
-                    { question: "", code: "", options: ["", "", "", ""], explanation: "", correctIndex: null }
-                ]);
+                setQuestions([{ question: "", code: "", options: ["", "", "", ""], explanation: "", correctIndex: null }]);
                 setPreviewed(false);
                 setShowPreview(false);
             } else {
@@ -104,13 +103,14 @@ const CreateQuizPage: React.FC = () => {
             alert("Please add at least one question.");
             return;
         }
+
         for (let i = 0; i < questions.length; i++) {
             const q = questions[i];
             if (q.question.trim() === "") {
                 alert(`Please enter question ${i + 1}.`);
                 return;
             }
-            if (q.options.some(opt => opt.trim() === "")) {
+            if (q.options.some((opt) => opt.trim() === "")) {
                 alert(`Please fill all options for question ${i + 1}.`);
                 return;
             }
@@ -123,6 +123,7 @@ const CreateQuizPage: React.FC = () => {
                 return;
             }
         }
+
         setShowPreview(true);
         setPreviewed(true);
     };
@@ -133,129 +134,117 @@ const CreateQuizPage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className={`flex flex-col items-center space-y-8 ${darkMode ? "text-white" : "text-gray-900"}`}
+                className="mx-auto flex w-full max-w-5xl flex-col gap-6"
             >
-                <div className="w-full max-w-4xl text-center">
-                    <h1 className="text-4xl font-bold mb-4">Create a New Quiz</h1>
-                    <div className={`mb-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                        <div className={`p-3 rounded ${darkMode ? "bg-[#1f2937] border border-gray-600" : "bg-gray-50 border border-gray-200"}`}>
-                            <strong className={`${darkMode ? "text-yellow-300" : "text-red-600"} mr-2`}>Note:</strong>
-                            Quiz Title, Question, Options, Choosing answer and Explanation are required fields.
-                            <div className="mt-1 text-xs">Required fields are validated on Preview/Submit — please fill them before continuing.</div>
+                <div className="surface-card rounded-2xl p-6 sm:p-8">
+                    <h1 className="page-title mb-3">Create a New Quiz</h1>
+                    <div className="surface-muted mb-6 rounded-xl p-3 text-sm text-[var(--omni-text-muted)]">
+                        <strong className="mr-2 text-[var(--omni-accent-strong)]">Note:</strong>
+                        Quiz title, question, options, correct answer, and explanation are required.
+                        <div className="mt-1 text-xs">Validation runs on Preview/Submit.</div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <label className="form-label mb-2 block">
+                                Quiz Title <span className="text-[var(--omni-danger)]">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Quiz Title"
+                                value={quizTitle}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => setQuizTitle(e.target.value)}
+                                aria-required="true"
+                                className="px-3 py-3"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="form-label mb-2 block">Quiz Referral</label>
+                            <input
+                                type="text"
+                                placeholder="Quiz Referral (optional)"
+                                value={quizRefferal}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => setQuizRefferal(e.target.value)}
+                                className="px-3 py-3"
+                            />
                         </div>
                     </div>
-                    <div className="w-full max-w-4xl">
-                        <div className="flex flex-col md:flex-row md:space-x-4">
-                            <div className="w-full md:w-1/2 mb-6">
-                                <label className="block text-sm mb-1">
-                                    Quiz Title
-                                    <span className="text-red-600 ml-1" aria-hidden="true">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Quiz Title"
-                                    value={quizTitle}
-                                    onChange={(e: ChangeEvent<HTMLInputElement>) => setQuizTitle(e.target.value)}
-                                    aria-required="true"
-                                    className={`w-full p-3 rounded-lg border ${darkMode ? "bg-[#23272f] border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                />
-                            </div>
-                            <div className="w-full md:w-1/2 mb-6">
-                                <label className="block text-sm mb-1">
-                                    Quiz Referral
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Quiz Referral (optional)"
-                                    value={quizRefferal}
-                                    onChange={(e: ChangeEvent<HTMLInputElement>) => setQuizRefferal(e.target.value)}
-                                    className={`w-full p-3 rounded-lg border ${darkMode ? "bg-[#23272f] border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                />
-                            </div>
+                </div>
+
+                {questions.map((q, idx) => (
+                    <div key={idx} className="surface-card rounded-2xl p-6">
+                        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start">
+                            <label className="form-label sm:pt-2">
+                                Question {idx + 1} <span className="text-[var(--omni-danger)]">*</span>
+                            </label>
+                            <textarea
+                                rows={2}
+                                placeholder={`Question ${idx + 1}`}
+                                value={q.question}
+                                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => handleQuestionChange(idx, "question", e.target.value)}
+                                aria-required="true"
+                                className="flex-1 px-3 py-3"
+                            />
                         </div>
-                        {questions.map((q, idx) => (
-                            <div key={idx} className={`mb-8 p-6 rounded-lg border ${darkMode ? "bg-[#23272f] border-gray-600" : "bg-white border-gray-300"}`}>
-                                <div className="flex items-center mb-4">
-                                    <label className="text-md font-semibold mr-4">
-                                        Question {idx + 1}
-                                        <span className="text-red-600" aria-hidden="true">*</span>
-                                    </label>
-                                    <textarea rows={2}
-                                        placeholder={`Question ${idx + 1}`}
-                                        value={q.question}
-                                        onChange={(e: ChangeEvent<HTMLTextAreaElement>) => handleQuestionChange(idx, "question", e.target.value)}
-                                        aria-required="true"
-                                        className={`w-80 p-2 rounded-lg border ${darkMode ? "bg-[#374151] border-gray-600 text-white" : "bg-white border-gray-300 text-black"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    />
-                                </div>
-                                <h3 className="text-lg text-left font-semibold mb-2">{`Enter Code for ${idx + 1}:`}</h3>
-                                <textarea
-                                    placeholder={`Code snippet (optional)`}
-                                    value={q.code}
-                                    onChange={(e: ChangeEvent<HTMLTextAreaElement>) => handleQuestionChange(idx, "code", e.target.value)}
-                                    className={`w-full p-3 mb-4 rounded-lg border ${darkMode ? "bg-[#374151] border-gray-600 text-white" : "bg-white border-gray-300 text-black"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    rows={4}
+
+                        <h3 className="mb-2 text-lg font-semibold text-[#fff8eb]">Code Snippet (optional)</h3>
+                        <textarea
+                            placeholder="Code snippet"
+                            value={q.code}
+                            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => handleQuestionChange(idx, "code", e.target.value)}
+                            className="mb-4 px-3 py-3"
+                            rows={4}
+                        />
+
+                        {q.options.map((opt, optIdx) => (
+                            <div key={optIdx} className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <input
+                                    type="text"
+                                    placeholder={`Option ${optIdx + 1}`}
+                                    value={opt}
+                                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleQuestionChange(idx, `option-${optIdx}`, e.target.value)}
+                                    className="px-3 py-2"
                                 />
-                                {q.options.map((opt, optIdx) => (
-                                    <div key={optIdx} className="flex items-center mb-3">
-                                        <input
-                                            type="text"
-                                            placeholder={`Option ${optIdx + 1}`}
-                                            value={opt}
-                                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleQuestionChange(idx, `option-${optIdx}`, e.target.value)}
-                                            className={`flex-1 p-2 rounded-lg border ${darkMode ? "bg-[#374151] border-gray-600 text-white" : "bg-white border-gray-300 text-black"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                        />
-                                        <span className="text-red-600" aria-hidden="true">*</span>
-                                        <label className="ml-4 flex items-center space-x-2">
-                                            <input
-                                                type="radio"
-                                                name={`correct-${idx}`}
-                                                value={optIdx}
-                                                checked={q.correctIndex === optIdx}
-                                                onChange={(e: ChangeEvent<HTMLInputElement>) => handleQuestionChange(idx, "correctIndex", e.target.value)}
-                                                className="form-radio h-5 w-5 text-blue-600"
-                                            />
-                                            <span>Choose answer
-                                                <span className="text-red-600" aria-hidden="true">*</span>
-                                            </span>
-                                        </label>
-                                    </div>
-                                ))}
-                                <div className="flex items-center mb-4">
-                                    <label className="text-md font-semibold mr-4">
-                                        Explanation for Q{idx + 1}:
-                                        <span className="text-red-600" aria-hidden="true">*</span>
-                                    </label>
-                                    <textarea rows={3}
-                                        placeholder={`Explanation for Q${idx + 1}`}
-                                        value={q.explanation}
-                                        onChange={(e: ChangeEvent<HTMLTextAreaElement>) => handleQuestionChange(idx, "explanation", e.target.value)}
-                                        className={`w-full p-3 rounded-lg border ${darkMode ? "bg-[#374151] border-gray-600 text-white" : "bg-white border-gray-300 text-black"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                <label className="flex items-center gap-2 text-sm text-[var(--omni-text-muted)]">
+                                    <input
+                                        type="radio"
+                                        name={`correct-${idx}`}
+                                        value={optIdx}
+                                        checked={q.correctIndex === optIdx}
+                                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleQuestionChange(idx, "correctIndex", e.target.value)}
+                                        className="h-4 w-4 accent-[var(--omni-accent)]"
                                     />
-                                </div>
+                                    Choose as answer <span className="text-[var(--omni-danger)]">*</span>
+                                </label>
                             </div>
                         ))}
-                        <div className="flex items-center justify-between space-x-4">
-                            <button
-                                onClick={handleAddQuestion}
-                                className={`hover:cursor-pointer px-6 py-3 rounded-lg font-semibold ${darkMode ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"} transition`}
-                            >
-                                Add Question
-                            </button>
-                            <button
-                                onClick={handlePreview}
-                                className={`hover:cursor-pointer px-6 py-3 rounded-lg font-semibold ${darkMode ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"} transition`}
-                            >
-                                Preview Quiz
-                            </button>
-                            <button
-                                onClick={handleSubmit}
-                                className={`hover:cursor-pointer px-6 py-3 rounded-lg font-semibold ${darkMode ? "bg-purple-600 hover:bg-purple-700 text-white" : "bg-purple-600 hover:bg-purple-700 text-white"} transition`}
-                            >
-                                Submit Quiz
-                            </button>
+
+                        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
+                            <label className="form-label sm:pt-2">
+                                Explanation <span className="text-[var(--omni-danger)]">*</span>
+                            </label>
+                            <textarea
+                                rows={3}
+                                placeholder={`Explanation for Q${idx + 1}`}
+                                value={q.explanation}
+                                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => handleQuestionChange(idx, "explanation", e.target.value)}
+                                className="flex-1 px-3 py-3"
+                            />
                         </div>
                     </div>
+                ))}
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                    <button onClick={handleAddQuestion} className="btn-secondary rounded-lg px-6 py-3 font-semibold">
+                        Add Question
+                    </button>
+                    <button onClick={handlePreview} className="btn-primary rounded-lg px-6 py-3">
+                        Preview Quiz
+                    </button>
+                    <button onClick={handleSubmit} className="btn-primary rounded-lg px-6 py-3">
+                        Submit Quiz
+                    </button>
                 </div>
             </motion.section>
 
@@ -265,39 +254,38 @@ const CreateQuizPage: React.FC = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4"
                     >
                         <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
+                            initial={{ scale: 0.92, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.8, opacity: 0 }}
-                            className={`${darkMode ? "bg-[#23272f] text-white" : "bg-white text-gray-900"} p-6 rounded-lg max-w-3xl w-full max-h-full overflow-y-auto`}
+                            exit={{ scale: 0.92, opacity: 0 }}
+                            className="surface-card max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl p-6"
                         >
-                            <h2 className={`text-2xl font-bold mb-4 ${darkMode ? "bg-[#23272f] border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}>Quiz Preview: {quizTitle}</h2>
+                            <h2 className="mb-4 text-2xl font-bold text-[#fff8eb]">Quiz Preview: {quizTitle}</h2>
                             {questions.map((q, idx) => (
                                 <div key={idx} className="mb-6">
-                                    <h3 className="font-semibold mb-2">{`Q${idx + 1}: ${q.question}`}</h3>
-                                    {q.code && q.code.toString().trim() !== "" && (
-                                        <div className="mb-4">
+                                    <h3 className="mb-2 font-semibold text-[#fff8eb]">Q{idx + 1}: {q.question}</h3>
+                                    {q.code && q.code.trim() !== "" && (
+                                        <div className="mb-4 overflow-hidden rounded-xl border border-[var(--omni-border)]">
                                             <SyntaxHighlighter language="javascript" style={vscDarkPlus}>
-                                                {q.code.toString()}
+                                                {q.code}
                                             </SyntaxHighlighter>
                                         </div>
                                     )}
-                                    <ul className="list-disc list-inside">
+                                    <ul className="list-disc space-y-1 pl-5 text-[var(--omni-text-muted)]">
                                         {q.options.map((opt, optIdx) => (
-                                            <li key={optIdx} className={q.correctIndex === optIdx ? "font-bold text-green-600" : ""}>
+                                            <li key={optIdx} className={q.correctIndex === optIdx ? "font-bold text-[var(--omni-success)]" : ""}>
                                                 {opt}
                                             </li>
                                         ))}
                                     </ul>
-                                    <h4 className="mt-2 italic">Explanation: {q.explanation || "No explanation provided."}</h4>
+                                    <h4 className="mt-2 text-sm italic text-[var(--omni-text-muted)]">
+                                        Explanation: {q.explanation || "No explanation provided."}
+                                    </h4>
                                 </div>
                             ))}
-                            <button
-                                onClick={() => setShowPreview(false)}
-                                className={`mt-4 px-6 py-3 rounded-lg font-semibold ${darkMode ? "bg-red-600 hover:bg-red-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"} transition`}
-                            >
+                            <button onClick={() => setShowPreview(false)} className="btn-secondary mt-2 rounded-lg px-6 py-3 font-semibold">
                                 Close Preview
                             </button>
                         </motion.div>
@@ -306,6 +294,6 @@ const CreateQuizPage: React.FC = () => {
             </AnimatePresence>
         </Layout>
     );
-}
+};
 
 export default CreateQuizPage;

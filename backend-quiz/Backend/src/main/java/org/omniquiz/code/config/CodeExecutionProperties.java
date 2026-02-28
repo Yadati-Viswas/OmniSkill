@@ -11,6 +11,8 @@ public class CodeExecutionProperties {
     private String apiKey;
     private String apiHost;
     private Duration timeout = Duration.ofSeconds(20);
+    private boolean localFallbackEnabled = true;
+    private boolean preferLocal = false;
 
     public boolean isEnabled() {
         return enabled;
@@ -50,5 +52,21 @@ public class CodeExecutionProperties {
 
     public void setTimeout(Duration timeout) {
         this.timeout = timeout;
+    }
+
+    public boolean isLocalFallbackEnabled() {
+        return localFallbackEnabled;
+    }
+
+    public void setLocalFallbackEnabled(boolean localFallbackEnabled) {
+        this.localFallbackEnabled = localFallbackEnabled;
+    }
+
+    public boolean isPreferLocal() {
+        return preferLocal;
+    }
+
+    public void setPreferLocal(boolean preferLocal) {
+        this.preferLocal = preferLocal;
     }
 }

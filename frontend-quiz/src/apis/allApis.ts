@@ -1,5 +1,23 @@
 import axios, { AxiosRequestConfig, AxiosResponse, Method } from "axios";
-import { LoginCredentials, SignupData, GeneratedQuizResponse, Problem, Quiz, CodeExecutionRequest, CodeExecutionResponse, CodeSubmissionRequest, CodeSubmissionResponse } from "../types";
+import {
+    LoginCredentials,
+    LoginResponse,
+    SignupData,
+    GeneratedQuizResponse,
+    Problem,
+    Quiz,
+    CodeExecutionRequest,
+    CodeExecutionResponse,
+    CodeSubmissionRequest,
+    CodeSubmissionResponse,
+    InterviewSession,
+    ResumeParseResponse,
+    InterviewFeedback,
+    InterviewFeedbackRequest,
+    QuizAttemptPayload,
+    QuizAttempt,
+    DashboardResponse
+} from "../types";
 import { logger } from "../utils/logger";
 
 const baseUrl = `http://localhost:8080`;
@@ -33,11 +51,14 @@ async function apiCall<T>(
     const requestId = createRequestId();
     const token = localStorage.getItem('token');
     const shouldAttachToken = isValidToken(token) && !endpoint.startsWith("/v1-api/auth/");
+    const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
     const defaultHeaders: Record<string, string> = {
-        'Content-Type': 'application/json',
         'X-Request-ID': requestId,
         ...(shouldAttachToken ? { Authorization: `Bearer ${token}` } : {}),
     };
+    if (data !== null && data !== undefined && !isFormData) {
+        defaultHeaders['Content-Type'] = 'application/json';
+    }
     const config: AxiosRequestConfig = {
         method,
         url,
@@ -88,8 +109,8 @@ async function singupUserApi(data: SignupData): Promise<AxiosResponse<{ message:
     return apiCall<{ message: string }>('POST', `/v1-api/auth/users/signup`, data);
 }
 
-async function loginUserApi(data: LoginCredentials): Promise<AxiosResponse<{ token: string; user: { username: string; email: string } }>> {
-    return apiCall<{ token: string; user: { username: string; email: string } }>('POST', `/v1-api/auth/users/login`, data);
+async function loginUserApi(data: LoginCredentials): Promise<AxiosResponse<LoginResponse>> {
+    return apiCall<LoginResponse>('POST', `/v1-api/auth/users/login`, data);
 }
 
 async function createQuizApi(data: Quiz): Promise<AxiosResponse<{ message: string }>> {
@@ -130,23 +151,6 @@ async function getProblemByIdApi(id: string | number): Promise<AxiosResponse<Pro
     return apiCall<Problem>('GET', `/v1-api/problems/${id}`);
 }
 
-// Interview types (imported types would be better but defining inline for now)
-interface InterviewSession {
-    id: string;
-    config: {
-        role: string;
-        jobDescription: string;
-        experienceLevel: string;
-    };
-    transcript: Array<{
-        speaker: 'user' | 'ai';
-        text: string;
-        timestamp: number;
-    }>;
-    startTime: number;
-    endTime?: number;
-}
-
 async function saveInterviewTranscriptApi(session: InterviewSession): Promise<AxiosResponse<{ message: string; id: string }>> {
     return apiCall<{ message: string; id: string }>('POST', `/v1-api/interviews`, session);
 }
@@ -157,6 +161,26 @@ async function getInterviewHistoryApi(): Promise<AxiosResponse<InterviewSession[
 
 async function getInterviewByIdApi(id: string): Promise<AxiosResponse<InterviewSession>> {
     return apiCall<InterviewSession>('GET', `/v1-api/interviews/${id}`);
+}
+
+async function parseResumeApi(formData: FormData): Promise<AxiosResponse<ResumeParseResponse>> {
+    return apiCall<ResumeParseResponse>('POST', `/v1-api/interviews/resume/parse`, formData);
+}
+
+async function generateInterviewFeedbackApi(payload: InterviewFeedbackRequest): Promise<AxiosResponse<InterviewFeedback>> {
+    return apiCall<InterviewFeedback>('POST', `/v1-api/interviews/feedback`, payload);
+}
+
+async function saveQuizAttemptApi(payload: QuizAttemptPayload): Promise<AxiosResponse<QuizAttempt>> {
+    return apiCall<QuizAttempt>('POST', `/v1-api/quiz/attempts`, payload);
+}
+
+async function getMyQuizAttemptsApi(): Promise<AxiosResponse<QuizAttempt[]>> {
+    return apiCall<QuizAttempt[]>('GET', `/v1-api/quiz/attempts/me`);
+}
+
+async function getDashboardApi(): Promise<AxiosResponse<DashboardResponse>> {
+    return apiCall<DashboardResponse>('GET', `/v1-api/dashboard`);
 }
 
 async function executeCodeApi(payload: CodeExecutionRequest): Promise<AxiosResponse<CodeExecutionResponse>> {
@@ -179,6 +203,11 @@ export {
     saveInterviewTranscriptApi,
     getInterviewHistoryApi,
     getInterviewByIdApi,
+    parseResumeApi,
+    generateInterviewFeedbackApi,
+    saveQuizAttemptApi,
+    getMyQuizAttemptsApi,
+    getDashboardApi,
     executeCodeApi,
     submitCodeApi
 };

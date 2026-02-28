@@ -2,18 +2,13 @@ import React, { useRef, useEffect, useCallback } from 'react';
 
 interface AudioVisualizerProps {
     analyserNode: AnalyserNode | null;
-    darkMode?: boolean;
     label?: string;
     color?: string;
     height?: number;
 }
 
-/**
- * Real-time audio waveform visualizer using canvas
- */
 const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     analyserNode,
-    darkMode = true,
     label,
     color,
     height = 100
@@ -21,9 +16,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animationIdRef = useRef<number | undefined>(undefined);
 
-    const getDefaultColor = useCallback((): string => {
-        return darkMode ? '#818cf8' : '#3b82f6'; // indigo-400 : blue-500
-    }, [darkMode]);
+    const getDefaultColor = useCallback((): string => '#f2b84b', []);
 
     const draw = useCallback(() => {
         const canvas = canvasRef.current;
@@ -38,11 +31,9 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
         const dataArray = new Uint8Array(bufferLength);
         analyserNode.getByteTimeDomainData(dataArray);
 
-        // Clear canvas
-        ctx.fillStyle = darkMode ? '#1f2937' : '#e5e7eb';
+        ctx.fillStyle = 'rgba(10, 12, 19, 0.9)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Draw waveform
         ctx.lineWidth = 2;
         ctx.strokeStyle = color || getDefaultColor();
         ctx.beginPath();
@@ -66,7 +57,6 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
         ctx.lineTo(canvas.width, canvas.height / 2);
         ctx.stroke();
 
-        // Draw bars visualization overlay
         const barWidth = 3;
         const barSpacing = 2;
         const barCount = Math.floor(canvas.width / (barWidth + barSpacing));
@@ -78,16 +68,16 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
         for (let i = 0; i < barCount; i++) {
             const dataIndex = Math.floor((i / barCount) * frequencyData.length);
             const barHeight = (frequencyData[dataIndex] / 255) * (canvas.height * 0.6);
-            const x = i * (barWidth + barSpacing);
-            const y = (canvas.height - barHeight) / 2;
+            const xPos = i * (barWidth + barSpacing);
+            const yPos = (canvas.height - barHeight) / 2;
 
             ctx.globalAlpha = 0.3;
-            ctx.fillRect(x, y, barWidth, barHeight);
+            ctx.fillRect(xPos, yPos, barWidth, barHeight);
             ctx.globalAlpha = 1;
         }
 
         animationIdRef.current = requestAnimationFrame(draw);
-    }, [analyserNode, darkMode, color, getDefaultColor]);
+    }, [analyserNode, color, getDefaultColor]);
 
     useEffect(() => {
         animationIdRef.current = requestAnimationFrame(draw);
@@ -102,7 +92,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     return (
         <div className="flex flex-col items-center">
             {label && (
-                <span className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                <span className="mb-2 text-sm font-medium text-[var(--omni-text-muted)]">
                     {label}
                 </span>
             )}
@@ -110,7 +100,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
                 ref={canvasRef}
                 width={300}
                 height={height}
-                className={`rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`}
+                className="rounded-lg border border-[var(--omni-border)] bg-[rgba(10,12,19,0.85)]"
                 style={{ width: '100%', maxWidth: 300, height }}
             />
         </div>

@@ -2,28 +2,29 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Layout from "../Layout";
-import { useDarkMode } from "../../contexts/DarkModeContextProvider";
 import { useAuth } from "../../contexts/AuthContext";
 import { toast } from "react-toastify";
 import { InterviewConfig, ExperienceLevel } from "../../types";
+import { parseResumeApi } from "../../apis/allApis";
 import {
     BriefcaseIcon,
     DocumentTextIcon,
     AcademicCapIcon,
-    PlayIcon
+    PlayIcon,
+    ArrowUpTrayIcon,
+    XMarkIcon
 } from "@heroicons/react/24/solid";
 
 const experienceLevels: ExperienceLevel[] = ['Entry', 'Mid', 'Senior', 'Lead'];
 
 const experienceDescriptions: Record<ExperienceLevel, string> = {
-    'Entry': '0-2 years of experience',
-    'Mid': '2-5 years of experience',
-    'Senior': '5-10 years of experience',
-    'Lead': '10+ years of experience'
+    Entry: '0-2 years of experience',
+    Mid: '2-5 years of experience',
+    Senior: '5-10 years of experience',
+    Lead: '10+ years of experience'
 };
 
 const StartInterviewPage: React.FC = () => {
-    const { darkMode } = useDarkMode();
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
@@ -33,19 +34,47 @@ const StartInterviewPage: React.FC = () => {
         experienceLevel: 'Mid'
     });
     const [errors, setErrors] = useState<Partial<Record<keyof InterviewConfig, string>>>({});
+    const [resumeFile, setResumeFile] = useState<File | null>(null);
+    const [isParsingResume, setIsParsingResume] = useState(false);
 
     const validateForm = (): boolean => {
         const newErrors: Partial<Record<keyof InterviewConfig, string>> = {};
-
         if (!config.role.trim()) {
             newErrors.role = 'Job role is required';
         }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleStartInterview = () => {
+    const handleResumeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = event.target.files?.[0];
+        if (!selectedFile) {
+            setResumeFile(null);
+            setConfig((prev) => ({ ...prev, resumeFileName: undefined, resumeText: undefined }));
+            return;
+        }
+
+        const extension = selectedFile.name.split('.').pop()?.toLowerCase();
+        if (!extension || !['pdf', 'docx'].includes(extension)) {
+            toast.error("Only PDF and DOCX files are allowed.");
+            event.target.value = '';
+            return;
+        }
+
+        setResumeFile(selectedFile);
+        setConfig((prev) => ({
+            ...prev,
+            resumeFileName: selectedFile.name,
+            resumeText: undefined
+        }));
+    };
+
+    const handleRemoveResume = () => {
+        setResumeFile(null);
+        setConfig((prev) => ({ ...prev, resumeFileName: undefined, resumeText: undefined }));
+    };
+
+    const handleStartInterview = async () => {
         if (!isAuthenticated) {
             toast.error("You must be logged in to start an interview.");
             navigate("/login");
@@ -57,8 +86,34 @@ const StartInterviewPage: React.FC = () => {
             return;
         }
 
-        // Navigate to interview session with config
-        navigate('/interview-session', { state: { config } });
+        let interviewConfig: InterviewConfig = { ...config };
+
+        if (resumeFile) {
+            try {
+                setIsParsingResume(true);
+                const formData = new FormData();
+                formData.append("resume", resumeFile);
+
+                const response = await parseResumeApi(formData);
+                interviewConfig = {
+                    ...interviewConfig,
+                    resumeFileName: response.data.fileName,
+                    resumeText: response.data.text
+                };
+
+                if (response.data.truncated) {
+                    toast.info("Resume content is long. Only the first portion will be used for interview context.");
+                }
+            } catch (error) {
+                console.error("Failed to parse resume:", error);
+                toast.error("Failed to parse resume. Please upload a valid PDF or DOCX file.");
+                return;
+            } finally {
+                setIsParsingResume(false);
+            }
+        }
+
+        navigate('/interview-session', { state: { config: interviewConfig } });
     };
 
     return (
@@ -67,131 +122,120 @@ const StartInterviewPage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className={`flex flex-col items-center space-y-8 ${darkMode ? "text-white" : "text-gray-900"}`}
+                className="mx-auto flex w-full max-w-3xl flex-col gap-7"
             >
-                {/* Header */}
                 <div className="text-center">
-                    <h1 className="text-4xl font-bold mb-4">Mock Interview</h1>
-                    <p className={`text-lg ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                        Practice your interview skills with our AI-powered interviewer
-                    </p>
+                    <h1 className="page-title mb-3">Mock Interview</h1>
+                    <p className="page-subtitle">Practice your interview skills with an AI-powered interviewer.</p>
                 </div>
 
-                {/* Configuration Form */}
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
+                    initial={{ opacity: 0, scale: 0.97 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.2, duration: 0.5 }}
-                    className={`w-full max-w-2xl rounded-2xl p-8 shadow-xl ${darkMode ? "bg-[#23272f]" : "bg-white"
-                        }`}
+                    transition={{ delay: 0.2, duration: 0.45 }}
+                    className="surface-card rounded-2xl p-6 sm:p-8"
                 >
-                    {/* Role Input */}
                     <div className="mb-6">
-                        <label className="flex items-center mb-2 font-semibold text-lg">
-                            <BriefcaseIcon className={`h-5 w-5 mr-2 ${darkMode ? "text-indigo-400" : "text-blue-600"}`} />
+                        <label className="form-label mb-2 flex items-center text-base">
+                            <BriefcaseIcon className="mr-2 h-5 w-5 text-[var(--omni-accent)]" />
                             Job Role / Title
                         </label>
                         <input
                             type="text"
                             value={config.role}
                             onChange={(e) => setConfig({ ...config, role: e.target.value })}
-                            placeholder="e.g., Senior Software Engineer, Product Manager..."
-                            className={`w-full p-4 rounded-xl border-2 transition-all ${errors.role
-                                ? 'border-red-500'
-                                : darkMode
-                                    ? "bg-[#1a1d24] border-gray-700 text-white focus:border-indigo-500"
-                                    : "bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500"
-                                } focus:outline-none`}
+                            placeholder="e.g., Senior Software Engineer"
+                            className={`px-4 py-3 ${errors.role ? "border-[var(--omni-danger)]" : ""}`}
                         />
-                        {errors.role && (
-                            <p className="text-red-500 text-sm mt-1">{errors.role}</p>
+                        {errors.role && <p className="mt-1 text-sm text-[var(--omni-danger)]">{errors.role}</p>}
+                    </div>
+
+                    <div className="mb-6">
+                        <label className="form-label mb-2 flex items-center text-base">
+                            <ArrowUpTrayIcon className="mr-2 h-5 w-5 text-[var(--omni-accent)]" />
+                            Resume (Optional)
+                        </label>
+                        <input
+                            type="file"
+                            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            onChange={handleResumeChange}
+                            className="cursor-pointer px-4 py-3 file:mr-4 file:rounded-md file:border-0 file:bg-[var(--omni-accent)]/20 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[var(--omni-accent-strong)]"
+                        />
+                        <p className="mt-2 text-xs text-[var(--omni-text-muted)]">
+                            Upload a PDF or DOCX to personalize interview questions from your profile.
+                        </p>
+                        {resumeFile && (
+                            <div className="surface-muted mt-3 flex items-center justify-between rounded-lg px-3 py-2 text-sm">
+                                <span className="truncate text-[var(--omni-text)]">{resumeFile.name}</span>
+                                <button
+                                    type="button"
+                                    onClick={handleRemoveResume}
+                                    className="ml-3 rounded-md border border-[var(--omni-border)] px-2 py-1 text-xs text-[var(--omni-text-muted)] hover:border-[var(--omni-danger)] hover:text-[var(--omni-danger)]"
+                                >
+                                    <span className="inline-flex items-center gap-1">
+                                        <XMarkIcon className="h-4 w-4" />
+                                        Remove
+                                    </span>
+                                </button>
+                            </div>
                         )}
                     </div>
 
-                    {/* Job Description */}
                     <div className="mb-6">
-                        <label className="flex items-center mb-2 font-semibold text-lg">
-                            <DocumentTextIcon className={`h-5 w-5 mr-2 ${darkMode ? "text-indigo-400" : "text-blue-600"}`} />
-                            Job Description
+                        <label className="form-label mb-2 flex items-center text-base">
+                            <DocumentTextIcon className="mr-2 h-5 w-5 text-[var(--omni-accent)]" />
+                            Job Description (Optional)
                         </label>
                         <textarea
                             value={config.jobDescription}
                             onChange={(e) => setConfig({ ...config, jobDescription: e.target.value })}
-                            placeholder="Paste the job description or key responsibilities here. This helps the AI tailor questions to your target role..."
+                            placeholder="Paste job description or key responsibilities (optional)"
                             rows={5}
-                            className={`w-full p-4 rounded-xl border-2 transition-all resize-none ${errors.jobDescription
-                                ? 'border-red-500'
-                                : darkMode
-                                    ? "bg-[#1a1d24] border-gray-700 text-white focus:border-indigo-500"
-                                    : "bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500"
-                                } focus:outline-none`}
+                            className="resize-none px-4 py-3"
                         />
-                        {errors.jobDescription && (
-                            <p className="text-red-500 text-sm mt-1">{errors.jobDescription}</p>
-                        )}
                     </div>
 
-                    {/* Experience Level */}
                     <div className="mb-8">
-                        <label className="flex items-center mb-3 font-semibold text-lg">
-                            <AcademicCapIcon className={`h-5 w-5 mr-2 ${darkMode ? "text-indigo-400" : "text-blue-600"}`} />
+                        <label className="form-label mb-3 flex items-center text-base">
+                            <AcademicCapIcon className="mr-2 h-5 w-5 text-[var(--omni-accent)]" />
                             Experience Level
                         </label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                             {experienceLevels.map((level) => (
                                 <motion.button
                                     key={level}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => setConfig({ ...config, experienceLevel: level })}
-                                    className={`p-4 rounded-xl border-2 transition-all text-center ${config.experienceLevel === level
-                                        ? darkMode
-                                            ? "bg-indigo-600 border-indigo-500 text-white"
-                                            : "bg-blue-600 border-blue-500 text-white"
-                                        : darkMode
-                                            ? "bg-[#1a1d24] border-gray-700 text-gray-300 hover:border-indigo-500"
-                                            : "bg-gray-50 border-gray-200 text-gray-700 hover:border-blue-500"
-                                        }`}
+                                    className={`rounded-xl border p-3 text-center transition ${config.experienceLevel === level ? "chip-active" : "chip"}`}
                                 >
                                     <div className="font-semibold">{level}</div>
-                                    <div className={`text-xs mt-1 ${config.experienceLevel === level
-                                        ? "text-white/80"
-                                        : darkMode ? "text-gray-500" : "text-gray-500"
-                                        }`}>
-                                        {experienceDescriptions[level]}
-                                    </div>
+                                    <div className="mt-1 text-xs text-[var(--omni-text-muted)]">{experienceDescriptions[level]}</div>
                                 </motion.button>
                             ))}
                         </div>
                     </div>
 
-                    {/* Start Button */}
                     <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handleStartInterview}
-                        className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center space-x-2 transition-all ${darkMode
-                            ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
-                            : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-                            } shadow-lg`}
+                        disabled={isParsingResume}
+                        className="btn-primary flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-lg"
                     >
                         <PlayIcon className="h-6 w-6" />
-                        <span>Start Interview</span>
+                        <span>{isParsingResume ? "Parsing Resume..." : "Start Interview"}</span>
                     </motion.button>
                 </motion.div>
 
-                {/* Tips Section */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.4, duration: 0.5 }}
-                    className={`w-full max-w-2xl p-6 rounded-xl ${darkMode ? "bg-[#1a1d24]" : "bg-gray-100"
-                        }`}
+                    className="surface-muted rounded-xl p-5"
                 >
-                    <h3 className={`font-semibold mb-3 ${darkMode ? "text-indigo-400" : "text-blue-600"}`}>
-                        💡 Tips for a Great Interview
-                    </h3>
-                    <ul className={`space-y-2 text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                    <h3 className="mb-3 font-semibold text-[var(--omni-accent-strong)]">Tips for a Great Interview</h3>
+                    <ul className="space-y-2 text-sm text-[var(--omni-text-muted)]">
                         <li>• Find a quiet place with minimal background noise</li>
                         <li>• Use headphones for better audio quality</li>
                         <li>• Speak clearly and at a moderate pace</li>

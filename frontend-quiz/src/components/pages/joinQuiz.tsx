@@ -1,7 +1,6 @@
 import React, { FormEvent } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useDarkMode } from "../../contexts/DarkModeContextProvider";
 import Layout from "../Layout";
 import { useAuth } from "../../contexts/AuthContext";
 import { toast } from "react-toastify";
@@ -9,12 +8,12 @@ import { joinQuizApi } from "../../apis/allApis";
 import "react-toastify/dist/ReactToastify.css";
 
 const JoinQuizPage: React.FC = () => {
-    const { darkMode } = useDarkMode();
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
 
     const handlerefferalCode = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
+
         if (!isAuthenticated) {
             toast.error("You must be logged in to join a quiz.");
             navigate("/login");
@@ -23,6 +22,7 @@ const JoinQuizPage: React.FC = () => {
 
         const formData = new FormData(e.currentTarget);
         const referralCode = (formData.get("referralCode") as string || "").trim();
+
         if (referralCode === "") {
             toast.error("Please enter a valid referral code.");
             return;
@@ -30,7 +30,6 @@ const JoinQuizPage: React.FC = () => {
 
         try {
             const response = await joinQuizApi(referralCode);
-            console.log("Join Quiz API Response:", response.data);
             toast.success("Successfully joined the quiz!");
             navigate("/quiz-started", { state: { generatedResponse: response.data } });
         } catch (error) {
@@ -45,29 +44,28 @@ const JoinQuizPage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className={`flex flex-col items-center space-y-8 ${darkMode ? "text-white" : "text-gray-900"}`}
+                className="mx-auto w-full max-w-2xl"
             >
-                <h1 className="text-4xl font-bold mb-4">Join Quiz through a Referral</h1>
-                <div className="w-full max-w-4xl">
-                    <form className="flex flex-col space-y-6" onSubmit={handlerefferalCode}>
+                <div className="surface-card rounded-2xl p-6 sm:p-8">
+                    <h1 className="page-title mb-4">Join Quiz with Referral</h1>
+                    <p className="page-subtitle mb-6">Enter your referral code to jump directly into a shared quiz.</p>
+
+                    <form className="flex flex-col gap-5" onSubmit={handlerefferalCode}>
                         <div>
-                            <label className="block text-sm font-medium mb-2" htmlFor="referralCode">
+                            <label className="form-label mb-2 block" htmlFor="referralCode">
                                 Referral Code
                             </label>
                             <input
                                 type="text"
                                 id="referralCode"
                                 name="referralCode"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? "bg-[#2c2f36] text-white border-gray-600" : "bg-white text-gray-900 border-gray-300"
-                                    }`}
+                                className="px-4 py-3"
                                 placeholder="Enter referral code"
                                 required
                             />
                         </div>
-                        <button
-                            type="submit"
-                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer"
-                        >
+
+                        <button type="submit" className="btn-primary rounded-lg px-6 py-3">
                             Join Quiz
                         </button>
                     </form>
@@ -75,6 +73,6 @@ const JoinQuizPage: React.FC = () => {
             </motion.section>
         </Layout>
     );
-}
+};
 
 export default JoinQuizPage;

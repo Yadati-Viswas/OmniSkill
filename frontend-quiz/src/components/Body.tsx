@@ -6,138 +6,126 @@ import {
     AcademicCapIcon,
     ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/solid";
-import { DarkModeProps, Feature } from "../types";
+import { Feature } from "../types";
 
 const features: Feature[] = [
     {
         name: "OmniQuiz",
         description: "Start practicing quizzes or create a quiz of your own choice",
         icon: TrophyIcon,
-        href: "/quiz",
+        href: "/omni-quiz",
     },
     {
         name: "Interview",
         description: "Conduct stellar technical interviews",
         icon: ChatBubbleLeftRightIcon,
-        href: "/interview",
+        href: "/start-interview",
     },
     {
         name: "SkillUp",
         description: "Practice courses of your choice",
         icon: AcademicCapIcon,
-        href: "/skillup",
+        href: "/start-courses",
     },
     {
         name: "Learn to Code",
         description: "Coding assessments to upskill yourself",
         icon: CodeBracketIcon,
-        href: "/code",
+        href: "/problems",
     },
 ];
 
-const Body: React.FC<DarkModeProps> = ({ darkMode }) => {
+const Body: React.FC = () => {
     return (
-        <div className={`min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
-            {/* Hero */}
+        <div className="space-y-14 sm:space-y-20">
             <motion.section
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="text-center py-16 px-6"
+                transition={{ duration: 0.55 }}
+                className="surface-card rounded-3xl px-6 py-10 text-center sm:px-10 sm:py-14"
             >
-                <h1 className={`text-5xl md:text-6xl font-bold mb-6 ${darkMode ? "text-white" : "text-gray-900"}`}>
-                    Welcome to <span className="text-blue-600">OmniSkill</span>
+                <h1 className="page-title mb-5">
+                    Welcome to <span className="text-[var(--omni-accent)]">OmniSkill</span>
                 </h1>
-                <p className={`text-xl md:text-2xl max-w-4xl mx-auto mb-8 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    Learn, practice, and master any skill — from art to finance, literature to engineering.
+                <p className="page-subtitle mx-auto mb-8 max-w-4xl">
+                    Learn, practice, and master any skill, from programming and interviews to quizzes and continuous upskilling.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                     <motion.a
-                        href="/explore"
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        className="px-8 py-3 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition"
+                        href="/start-quiz"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="btn-primary rounded-xl px-8 py-3 text-base"
                     >
                         Explore Skills
                     </motion.a>
                     <motion.a
-                        href="/create"
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        className={`px-8 py-3 font-medium rounded-lg border-2 ${darkMode
-                                ? "border-blue-500 text-blue-400 hover:bg-blue-500/10"
-                                : "border-blue-600 text-blue-600 hover:bg-blue-50"
-                            } transition`}
+                        href="/create-quiz"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="btn-secondary rounded-xl px-8 py-3 text-base font-semibold"
                     >
                         Create Content
                     </motion.a>
                 </div>
             </motion.section>
 
-            {/* Feature Cards */}
-            <section className="py-16 px-6 max-w-7xl mx-auto">
-                <div className="text-center mb-12">
-                    <h2 className={`text-3xl md:text-4xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
+            <section className="space-y-9">
+                <div className="text-center">
+                    <h2 className="text-3xl font-bold text-[#fff9ed] sm:text-4xl">
                         Everything You Need in One Place
                     </h2>
-                    <p className={`mt-4 text-lg ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                        Quizzes, coding, interviews, courses — all built for real-world growth.
+                    <p className="text-muted mx-auto mt-3 max-w-3xl text-lg">
+                        Quizzes, coding, interviews, and practice modules designed for real growth.
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
                     {features.map((feature, i) => (
                         <motion.a
                             key={feature.name}
                             href={feature.href}
-                            initial={{ opacity: 0, y: 20 }}
+                            initial={{ opacity: 0, y: 18 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            className={`p-6 rounded-xl border ${darkMode
-                                    ? "bg-gray-800 border-gray-700 hover:border-blue-500"
-                                    : "bg-white border-gray-200 hover:border-blue-400"
-                                } hover:shadow-md transition-all`}
+                            transition={{ delay: i * 0.08 }}
+                            className="surface-card group rounded-2xl p-6"
                         >
-                            <div className="flex items-center mb-4">
-                                <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                                    <feature.icon className="w-6 h-6" />
-                                </div>
+                            <div className="mb-5 inline-flex rounded-xl border border-[var(--omni-border-strong)] bg-[var(--omni-accent-soft)] p-3 text-[var(--omni-accent-strong)]">
+                                <feature.icon className="h-6 w-6" />
                             </div>
-                            <h3 className={`text-lg font-semibold mb-1 ${darkMode ? "text-white" : "text-gray-900"}`}>
+                            <h3 className="mb-2 text-xl font-semibold text-[#fff7e9] group-hover:text-[var(--omni-accent-strong)]">
                                 {feature.name}
                             </h3>
-                            <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                                {feature.description}
-                            </p>
+                            <p className="text-sm text-[var(--omni-text-muted)]">{feature.description}</p>
                         </motion.a>
                     ))}
                 </div>
             </section>
 
-            {/* Final CTA */}
             <motion.section
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
-                className={`py-16 px-6 text-center ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}
+                viewport={{ once: true, amount: 0.4 }}
+                className="surface-card rounded-3xl px-6 py-12 text-center sm:px-10"
             >
-                <h3 className={`text-2xl md:text-3xl font-bold mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
+                <h3 className="mb-4 text-2xl font-extrabold text-[#fff8ec] sm:text-3xl">
                     Start Learning Today
                 </h3>
-                <p className={`text-lg mb-8 max-w-2xl mx-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    Free to begin. No credit card required.
+                <p className="text-muted mx-auto mb-8 max-w-2xl text-lg">
+                    Jump in for free, choose your path, and build momentum with focused practice.
                 </p>
                 <motion.a
                     href="/signup"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    className="inline-block px-10 py-4 bg-blue-600 text-white font-medium text-lg rounded-lg shadow hover:bg-blue-700 transition"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="btn-primary inline-block rounded-xl px-10 py-4 text-lg"
                 >
                     Get Started Free
                 </motion.a>
             </motion.section>
         </div>
     );
-}
+};
 
 export default Body;

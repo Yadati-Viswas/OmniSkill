@@ -1,31 +1,103 @@
-import React, { useState, useEffect, ChangeEvent, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-import Layout from '../Layout';
-import { useDarkMode } from '../../contexts/DarkModeContextProvider';
+import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Editor from "@monaco-editor/react";
 import type * as monaco from "monaco-editor";
 import { motion } from 'framer-motion';
+import { toast } from 'react-toastify';
+import Layout from '../Layout';
 import { executeCodeApi, getProblemByIdApi, submitCodeApi } from '../../apis/allApis';
 import { useAuth } from '../../contexts/AuthContext';
-import { Problem, Example, Language, CodeExecutionResponse, CodeSubmissionResponse } from '../../types';
+import { CodeExecutionResponse, CodeSubmissionResponse, Example, Language, Problem } from '../../types';
+
+const INITIAL_VISIBLE_SECTIONS = 1;
+const MOD = 1000000007;
+
+const parseExamples = (problem: Problem | null): Example[] => {
+    if (!problem) return [];
+    try {
+        return typeof problem.examples === 'string'
+            ? JSON.parse(problem.examples)
+            : (problem.examples || []);
+    } catch {
+        return [];
+    }
+};
+
+const inferInputMeta = (problem: Problem | null): { sampleInput: string; keys: string[]; primaryKey: string } => {
+    const examples = parseExamples(problem);
+    const firstInput = examples[0]?.input;
+
+    if (firstInput && typeof firstInput === 'object' && !Array.isArray(firstInput)) {
+        const keys = Object.keys(firstInput);
+        return {
+            sampleInput: JSON.stringify(firstInput),
+            keys,
+            primaryKey: keys[0] || 'n'
+        };
+    }
+
+    return {
+        sampleInput: '{"n":2}',
+        keys: ['n'],
+        primaryKey: 'n'
+    };
+};
+
+const buildStarterCode = (selectedLanguage: string, problem: Problem | null): string => {
+    const title = problem?.title || 'Coding Problem';
+    const normalizedTitle = title.toLowerCase();
+    const inputMeta = inferInputMeta(problem);
+    const key = inputMeta.primaryKey;
+    const keyAsJs = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? key : `'${key}'`;
+
+    if (normalizedTitle.includes('climbing stairs')) {
+        switch (selectedLanguage) {
+            case "javascript":
+                return `const fs = require('fs');\n\nconst raw = fs.readFileSync(0, 'utf8').trim();\nconst data = raw ? JSON.parse(raw) : {};\n\n// Problem: ${title}\n// Expected stdin JSON: ${inputMeta.sampleInput}\nfunction solve(data) {\n  const n = Number(data.n ?? 0);\n  if (n <= 1) return 1;\n\n  let prev2 = 1;\n  let prev1 = 1;\n  for (let i = 2; i <= n; i++) {\n    const current = (prev1 + prev2) % ${MOD};\n    prev2 = prev1;\n    prev1 = current;\n  }\n  return prev1;\n}\n\nconst result = solve(data);\nprocess.stdout.write(JSON.stringify(result));\n`;
+            case "python":
+                return `import sys\nimport json\n\n# Problem: ${title}\n# Expected stdin JSON: ${inputMeta.sampleInput}\ndef solve(data):\n    n = int(data.get("n", 0))\n    if n <= 1:\n        return 1\n\n    prev2, prev1 = 1, 1\n    for _ in range(2, n + 1):\n        prev2, prev1 = prev1, (prev1 + prev2) % ${MOD}\n    return prev1\n\nraw = sys.stdin.read().strip()\ndata = json.loads(raw) if raw else {}\nprint(json.dumps(solve(data)))\n`;
+            case "java":
+                return `import java.io.*;\nimport java.util.regex.*;\n\npublic class Main {\n    // Problem: ${title}\n    // Expected stdin JSON: ${inputMeta.sampleInput}\n    private static final int MOD = ${MOD};\n\n    public static void main(String[] args) throws Exception {\n        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n        String raw = br.readLine();\n        if (raw == null) raw = \"\";\n        raw = raw.trim();\n\n        int n = parseInt(raw, \"n\", 0);\n        System.out.print(solve(n));\n    }\n\n    private static int solve(int n) {\n        if (n <= 1) return 1;\n\n        int prev2 = 1, prev1 = 1;\n        for (int i = 2; i <= n; i++) {\n            int current = (int)(((long) prev1 + prev2) % MOD);\n            prev2 = prev1;\n            prev1 = current;\n        }\n        return prev1;\n    }\n\n    private static int parseInt(String json, String key, int fallback) {\n        Pattern p = Pattern.compile(\"\\\\\\\"\" + Pattern.quote(key) + \"\\\\\\\"\\\\s*:\\\\s*(-?\\\\d+)\");\n        Matcher m = p.matcher(json);\n        if (m.find()) return Integer.parseInt(m.group(1));\n        return fallback;\n    }\n}\n`;
+            case "cpp":
+                return `#include <bits/stdc++.h>\nusing namespace std;\n\nstatic const int MOD = ${MOD};\n\nint extractInt(const string& raw, const string& key, int fallback = 0) {\n    string token = \"\\\"\" + key + \"\\\"\";\n    size_t start = raw.find(token);\n    if (start == string::npos) return fallback;\n\n    start = raw.find(':', start);\n    if (start == string::npos) return fallback;\n    start++;\n\n    while (start < raw.size() && isspace(static_cast<unsigned char>(raw[start]))) start++;\n    bool neg = (start < raw.size() && raw[start] == '-');\n    if (neg) start++;\n\n    long long val = 0;\n    bool found = false;\n    while (start < raw.size() && isdigit(static_cast<unsigned char>(raw[start]))) {\n        found = true;\n        val = val * 10 + (raw[start] - '0');\n        start++;\n    }\n\n    if (!found) return fallback;\n    return static_cast<int>(neg ? -val : val);\n}\n\nint solve(int n) {\n    if (n <= 1) return 1;\n\n    int prev2 = 1, prev1 = 1;\n    for (int i = 2; i <= n; i++) {\n        int current = static_cast<int>((prev1 + prev2) % MOD);\n        prev2 = prev1;\n        prev1 = current;\n    }\n    return prev1;\n}\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    string raw;\n    getline(cin, raw);\n\n    // Problem: ${title}\n    // Expected stdin JSON: ${inputMeta.sampleInput}\n    int n = extractInt(raw, \"n\", 0);\n    cout << solve(n);\n    return 0;\n}\n`;
+            default:
+                return "";
+        }
+    }
+
+    switch (selectedLanguage) {
+        case "javascript":
+            return `const fs = require('fs');\n\nconst raw = fs.readFileSync(0, 'utf8').trim();\nconst data = raw ? JSON.parse(raw) : {};\n\n// Problem: ${title}\n// Expected stdin JSON: ${inputMeta.sampleInput}\n// Input keys: ${inputMeta.keys.join(', ')}\nfunction solve(data) {\n  const value = data.${keyAsJs};\n  // TODO: implement\n  return value;\n}\n\nconst result = solve(data);\nprocess.stdout.write(JSON.stringify(result));\n`;
+        case "python":
+            return `import sys\nimport json\n\n# Problem: ${title}\n# Expected stdin JSON: ${inputMeta.sampleInput}\n# Input keys: ${inputMeta.keys.join(', ')}\ndef solve(data):\n    value = data.get("${key}")\n    # TODO: implement\n    return value\n\nraw = sys.stdin.read().strip()\ndata = json.loads(raw) if raw else {}\nprint(json.dumps(solve(data)))\n`;
+        case "java":
+            return `import java.io.*;\nimport java.util.regex.*;\n\npublic class Main {\n    // Problem: ${title}\n    // Expected stdin JSON: ${inputMeta.sampleInput}\n    // Input keys: ${inputMeta.keys.join(', ')}\n\n    public static void main(String[] args) throws Exception {\n        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n        String raw = br.readLine();\n        if (raw == null) raw = \"\";\n        raw = raw.trim();\n\n        Object result = solve(raw);\n        System.out.print(result);\n    }\n\n    private static Object solve(String rawJson) {\n        int value = parseInt(rawJson, \"${key}\", 0);\n        // TODO: implement\n        return value;\n    }\n\n    private static int parseInt(String json, String key, int fallback) {\n        Pattern p = Pattern.compile(\"\\\\\\\"\" + Pattern.quote(key) + \"\\\\\\\"\\\\s*:\\\\s*(-?\\\\d+)\");\n        Matcher m = p.matcher(json);\n        if (m.find()) return Integer.parseInt(m.group(1));\n        return fallback;\n    }\n}\n`;
+        case "cpp":
+            return `#include <bits/stdc++.h>\nusing namespace std;\n\nint extractInt(const string& raw, const string& key, int fallback = 0) {\n    string token = \"\\\"\" + key + \"\\\"\";\n    size_t start = raw.find(token);\n    if (start == string::npos) return fallback;\n\n    start = raw.find(':', start);\n    if (start == string::npos) return fallback;\n    start++;\n\n    while (start < raw.size() && isspace(static_cast<unsigned char>(raw[start]))) start++;\n    bool neg = (start < raw.size() && raw[start] == '-');\n    if (neg) start++;\n\n    long long val = 0;\n    bool found = false;\n    while (start < raw.size() && isdigit(static_cast<unsigned char>(raw[start]))) {\n        found = true;\n        val = val * 10 + (raw[start] - '0');\n        start++;\n    }\n\n    if (!found) return fallback;\n    return static_cast<int>(neg ? -val : val);\n}\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    string raw;\n    getline(cin, raw);\n\n    // Problem: ${title}\n    // Expected stdin JSON: ${inputMeta.sampleInput}\n    // Input keys: ${inputMeta.keys.join(', ')}\n    int value = extractInt(raw, \"${key}\", 0);\n\n    // TODO: implement\n    cout << value;\n    return 0;\n}\n`;
+        default:
+            return "";
+    }
+};
 
 const StartCodingPage: React.FC = () => {
     const { user } = useAuth();
-    const { darkMode } = useDarkMode();
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+
     const [problem, setProblem] = useState<Problem | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [code, setCode] = useState<string>("");
     const [output, setOutput] = useState<string>("");
     const [language, setLanguage] = useState<string>("javascript");
     const [customInput, setCustomInput] = useState<string>("");
+    const [isRunning, setIsRunning] = useState<boolean>(false);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [engineMessage, setEngineMessage] = useState<string | null>(null);
+    const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<"console" | "input">("console");
+    const [visibleSections, setVisibleSections] = useState<number>(INITIAL_VISIBLE_SECTIONS);
+
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-    const codeTemplates: Record<string, string> = {
-        javascript: `const fs = require('fs');\n\nconst input = fs.readFileSync(0, 'utf8').trim();\nconst data = input ? JSON.parse(input) : {};\n\n// TODO: implement\nfunction solve(data) {\n  const n = data.n;\n  // ...\n  return n;\n}\n\nconst result = solve(data);\nprocess.stdout.write(JSON.stringify(result));\n`,
-        python: `import sys, json\n\ndef solve(data):\n    n = data.get('n')\n    # TODO: implement\n    return n\n\nraw = sys.stdin.read().strip()\ndata = json.loads(raw) if raw else {}\nresult = solve(data)\nprint(json.dumps(result))\n`,
-        java: `import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n        String raw = br.readLine();\n        if (raw == null || raw.trim().isEmpty()) {\n            return;\n        }\n        // Expect JSON input like {\"n\":2}\n        Map<String, Object> data = new HashMap<>();\n        // Simple parse for {\"n\":2}\n        String cleaned = raw.replaceAll(\"[{}\\\"\\\\s]\", \"\");\n        if (!cleaned.isEmpty()) {\n            String[] parts = cleaned.split(\":\");\n            if (parts.length == 2) {\n                data.put(parts[0], Integer.parseInt(parts[1]));\n            }\n        }\n        Object result = solve(data);\n        System.out.print(result);\n    }\n\n    private static Object solve(Map<String, Object> data) {\n        int n = (int) data.getOrDefault(\"n\", 0);\n        // TODO: implement\n        return n;\n    }\n}\n`,
-        cpp: `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    string raw;\n    if (!getline(cin, raw)) return 0;\n    if (raw.empty()) return 0;\n    // Expect JSON input like {\"n\":2}\n    int n = 0;\n    size_t pos = raw.find(\":\");\n    if (pos != string::npos) {\n        n = stoi(raw.substr(pos + 1));\n    }\n    // TODO: implement\n    cout << n;\n    return 0;\n}\n`,
-    };
+    const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
     const languages: Language[] = [
         { id: "javascript", name: "JavaScript" },
@@ -40,32 +112,68 @@ const StartCodingPage: React.FC = () => {
                 if (!id) return;
                 const response = await getProblemByIdApi(id);
                 setProblem(response.data);
-                console.log("Fetched Problem:", response.data);
-                if (!code.trim()) {
-                    setCode(codeTemplates[language] || "");
-                }
+                setVisibleSections(INITIAL_VISIBLE_SECTIONS);
+                setCode(buildStarterCode(language, response.data));
             } catch (error) {
                 console.error("Failed to fetch problem", error);
             } finally {
                 setLoading(false);
             }
         };
+
         if (id) {
             fetchProblem();
         }
     }, [id]);
 
-    useEffect(() => {
-        if (!code.trim()) {
-            setCode(codeTemplates[language] || "");
+    const handleLanguageChange = (event: ChangeEvent<HTMLSelectElement>) => {
+        const nextLanguage = event.target.value;
+        if (nextLanguage === language) return;
+
+        const currentStarter = buildStarterCode(language, problem).trim();
+        const hasUserEdits = code.trim().length > 0 && code.trim() !== currentStarter;
+
+        if (hasUserEdits) {
+            const shouldReplace = window.confirm(
+                `Switching language will replace your current code with a ${nextLanguage} starter. Continue?`
+            );
+            if (!shouldReplace) {
+                return;
+            }
         }
-    }, [language]);
+
+        setLanguage(nextLanguage);
+        setCode(buildStarterCode(nextLanguage, problem));
+        setOutput("");
+        setEngineMessage(null);
+        toast.info(`Loaded ${nextLanguage.toUpperCase()} starter code for "${problem?.title || 'this problem'}".`);
+    };
+
+    const getErrorMessage = (error: any, fallback: string): string =>
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        fallback;
+
+    const isEngineUnavailable = (message: string): boolean => {
+        const normalized = message.toLowerCase();
+        return normalized.includes("judge0")
+            || normalized.includes("2358")
+            || normalized.includes("unreachable")
+            || normalized.includes("connection refused")
+            || normalized.includes("service unavailable");
+    };
 
     const handleRun = async (): Promise<void> => {
         if (!problem) {
             setOutput("Problem not loaded.");
             return;
         }
+
+        if (isRunning) return;
+        setActiveWorkspaceTab("console");
+        setEngineMessage(null);
+        setIsRunning(true);
         setOutput("Running code...");
         try {
             const response = await executeCodeApi({
@@ -73,17 +181,25 @@ const StartCodingPage: React.FC = () => {
                 sourceCode: code,
                 stdin: customInput
             });
+
             const data = response.data as CodeExecutionResponse;
             const resultLines = [
                 data.status?.description ? `Status: ${data.status.description}` : null,
+                data.message ? `Message:\n${data.message}` : null,
                 data.compileOutput ? `Compile Output:\n${data.compileOutput}` : null,
                 data.stderr ? `Stderr:\n${data.stderr}` : null,
                 data.stdout ? `Stdout:\n${data.stdout}` : null
             ].filter(Boolean);
+
             setOutput(resultLines.length ? resultLines.join("\n\n") : "No output returned.");
         } catch (error: any) {
-            const message = error?.response?.data?.message || error?.response?.data?.error || "Server execution failed.";
+            const message = getErrorMessage(error, "Server execution failed.");
             setOutput(message);
+            if (isEngineUnavailable(message)) {
+                setEngineMessage(message);
+            }
+        } finally {
+            setIsRunning(false);
         }
     };
 
@@ -92,17 +208,30 @@ const StartCodingPage: React.FC = () => {
             setOutput("Problem not loaded.");
             return;
         }
+
+        if (isSubmitting) return;
+        const parsedProblemId = Number(problem.id);
+        if (!Number.isFinite(parsedProblemId)) {
+            setOutput(`Invalid problem id: ${problem.id}`);
+            return;
+        }
+
+        setActiveWorkspaceTab("console");
+        setEngineMessage(null);
+        setIsSubmitting(true);
         setOutput("Submitting code...");
         try {
             const response = await submitCodeApi({
                 language,
                 sourceCode: code,
-                problemId: Number(problem.id),
+                problemId: parsedProblemId,
             });
+
             const data = response.data as CodeSubmissionResponse;
             const header = data.allPassed
                 ? `All Test Cases Passed (${data.passedCount}/${data.totalCount})`
                 : `Some Test Cases Failed (${data.passedCount}/${data.totalCount})`;
+
             const lines = [header, "------------------------------"];
             data.results.forEach((r) => {
                 lines.push(`Test Case ${r.index}: ${r.passed ? "PASSED" : "FAILED"}`);
@@ -111,10 +240,17 @@ const StartCodingPage: React.FC = () => {
                 if (r.error) lines.push(`Error: ${r.error}`);
                 lines.push("------------------------------");
             });
+
             setOutput(lines.join("\n"));
         } catch (error: any) {
-            const message = error?.response?.data?.message || error?.response?.data?.error || "Submission failed.";
+            const message = getErrorMessage(error, "Submission failed.");
             setOutput(message);
+            if (isEngineUnavailable(message)) {
+                setEngineMessage(message);
+                toast.error("Code execution engine is offline. Start Judge0 and try again.");
+            }
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -124,11 +260,119 @@ const StartCodingPage: React.FC = () => {
         }
     }, [output]);
 
+    const parsedExamples = useMemo((): Example[] => {
+        if (!problem) return [];
+        try {
+            return typeof problem.examples === 'string'
+                ? JSON.parse(problem.examples)
+                : (problem.examples || []);
+        } catch {
+            return [];
+        }
+    }, [problem]);
+
+    const parsedConstraints = useMemo((): string[] => {
+        if (!problem) return [];
+        try {
+            const constraints = typeof problem.constraints === 'string'
+                ? JSON.parse(problem.constraints)
+                : problem.constraints;
+            return Array.isArray(constraints)
+                ? constraints
+                : [String(problem.constraints)];
+        } catch {
+            return [String(problem.constraints)];
+        }
+    }, [problem]);
+
+    const parsedTags = useMemo((): string[] => {
+        if (!problem) return [];
+        return Array.isArray(problem.tags)
+            ? problem.tags
+            : typeof problem.tags === "string"
+                ? problem.tags.replace(/[\[\]"']/g, "").split(",").map((t) => t.trim()).filter(Boolean)
+                : [];
+    }, [problem]);
+
+    const problemSections = useMemo(() => {
+        if (!problem) return [];
+
+        return [
+            {
+                key: "description",
+                title: "Description",
+                body: (
+                    <p className="whitespace-pre-wrap text-lg leading-8 text-[var(--omni-text-muted)]">
+                        {problem.description || "No description provided."}
+                    </p>
+                )
+            },
+            {
+                key: "examples",
+                title: "Examples",
+                body: parsedExamples.length > 0 ? (
+                    <div className="space-y-4">
+                        {parsedExamples.map((ex, idx) => (
+                            <div key={idx} className="surface-muted rounded-xl border p-4">
+                                <h3 className="mb-3 text-lg font-semibold text-[#fff8eb]">Example {idx + 1}</h3>
+                                <div className="space-y-2 font-mono text-sm text-[var(--omni-text-muted)]">
+                                    <p><span className="font-bold text-[#fff8eb]">Input:</span> {typeof ex.input === 'object' ? JSON.stringify(ex.input) : ex.input}</p>
+                                    <p><span className="font-bold text-[#fff8eb]">Output:</span> {typeof ex.output === 'object' ? JSON.stringify(ex.output) : String(ex.output)}</p>
+                                    {ex.explanation && <p><span className="font-bold text-[#fff8eb]">Explanation:</span> {ex.explanation}</p>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="surface-muted rounded-xl border p-4">
+                        <pre className="whitespace-pre-wrap font-mono text-sm text-[var(--omni-text-muted)]">
+                            {typeof problem.examples === 'string' ? problem.examples : JSON.stringify(problem.examples, null, 2)}
+                        </pre>
+                    </div>
+                )
+            },
+            {
+                key: "constraints",
+                title: "Constraints",
+                body: (
+                    <div className="surface-muted rounded-xl border p-4">
+                        <ul className="list-disc space-y-2 pl-5">
+                            {parsedConstraints.map((constraint, index) => (
+                                <li key={index} className="font-mono text-sm text-[var(--omni-text-muted)]">
+                                    {constraint}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )
+            }
+        ];
+    }, [parsedConstraints, parsedExamples, problem]);
+
+    const hasMoreSections = visibleSections < problemSections.length;
+
+    useEffect(() => {
+        if (!hasMoreSections || !loadMoreRef.current) return;
+        if (typeof IntersectionObserver === "undefined") return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const [entry] = entries;
+                if (!entry.isIntersecting) return;
+                setVisibleSections((prev) => Math.min(prev + 1, problemSections.length));
+            },
+            { rootMargin: "120px 0px" }
+        );
+
+        observer.observe(loadMoreRef.current);
+        return () => observer.disconnect();
+    }, [hasMoreSections, problemSections.length, visibleSections]);
+
     if (loading) {
         return (
             <Layout>
-                <div className={`flex items-center justify-center h-[calc(100vh-200px)] ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    <div className="text-xl font-semibold">Loading Problem...</div>
+                <div className="flex h-[calc(100vh-200px)] items-center justify-center">
+                    <div className="text-xl font-semibold text-[#fff8eb]">Loading problem...</div>
                 </div>
             </Layout>
         );
@@ -137,127 +381,110 @@ const StartCodingPage: React.FC = () => {
     if (!problem) {
         return (
             <Layout>
-                <div className={`flex items-center justify-center h-[calc(100vh-200px)] ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    <div className="text-xl font-semibold">Problem not found.</div>
+                <div className="flex h-[calc(100vh-200px)] items-center justify-center">
+                    <div className="text-xl font-semibold text-[#fff8eb]">Problem not found.</div>
                 </div>
             </Layout>
         );
     }
 
-    let parsedExamples: Example[] = [];
-    try {
-        parsedExamples = typeof problem.examples === 'string' ? JSON.parse(problem.examples) : (problem.examples || []);
-    } catch {
-        parsedExamples = [];
-    }
-
-    let parsedConstraints: string[] = [];
-    try {
-        const constraints = typeof problem.constraints === 'string' ? JSON.parse(problem.constraints) : problem.constraints;
-        parsedConstraints = Array.isArray(constraints) ? constraints : [String(problem.constraints)];
-    } catch {
-        parsedConstraints = [String(problem.constraints)];
-    }
-
     return (
         <Layout>
-            <div className={`flex flex-col lg:flex-row gap-6 h-[calc(100vh-200px)] ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-
-                {/* Left Panel: Problem Description */}
-                <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className={`flex-1 overflow-y-auto p-6 rounded-xl shadow-lg border ${darkMode ? "bg-[#23272f] border-gray-700" : "bg-white border-gray-200"}`}
+            <div className="mx-auto grid w-full max-w-[1700px] gap-5 lg:grid-cols-12">
+                <motion.section
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-4 lg:col-span-5 xl:col-span-4"
                 >
-                    <div className="flex items-center justify-between mb-4">
-                        <h1 className="text-2xl font-bold">{problem.title}</h1>
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold
-              ${problem.difficultyLevel === 'Easy' ? 'bg-green-100 text-green-700' :
-                                problem.difficultyLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-                            {problem.difficultyLevel}
-                        </span>
-                    </div>
+                    <header className="surface-card rounded-2xl border p-5 sm:p-6">
+                        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                            <h1 className="text-3xl font-extrabold tracking-tight text-[#fff8eb] sm:text-4xl">{problem.title}</h1>
+                            <span className={`rounded-full px-3 py-1 text-sm font-semibold ${problem.difficultyLevel === 'Easy'
+                                    ? 'bg-green-100 text-green-700'
+                                    : problem.difficultyLevel === 'Medium'
+                                        ? 'bg-yellow-100 text-yellow-700'
+                                        : 'bg-red-100 text-red-700'
+                                }`}>
+                                {problem.difficultyLevel}
+                            </span>
+                        </div>
 
-                    <div className="prose dark:prose-invert max-w-none">
-                        <p className="whitespace-pre-wrap">{problem.description}</p>
-                    </div>
-
-                    <div className="mt-8 space-y-6">
-                        {parsedExamples && Array.isArray(parsedExamples) && parsedExamples.map((ex, idx) => (
-                            <div key={idx} className={`p-4 rounded-lg ${darkMode ? "bg-gray-800" : "bg-gray-100"}`}>
-                                <h3 className="font-semibold mb-2">Example {idx + 1}:</h3>
-                                <div className="font-mono text-sm space-y-1">
-                                    <p><span className="font-bold">Input:</span> {typeof ex.input === 'object' ? JSON.stringify(ex.input) : ex.input}</p>
-                                    <p><span className="font-bold">Output:</span> {typeof ex.output === 'object' ? JSON.stringify(ex.output) : String(ex.output)}</p>
-                                    {ex.explanation && <p><span className="font-bold">Explanation:</span> {ex.explanation}</p>}
-                                </div>
-                            </div>
-                        ))}
-                        {(!parsedExamples || parsedExamples.length === 0) && problem.examples && (
-                            <div className={`p-4 rounded-lg ${darkMode ? "bg-gray-800" : "bg-gray-100"}`}>
-                                <pre className="whitespace-pre-wrap font-mono text-sm">{typeof problem.examples === 'string' ? problem.examples : JSON.stringify(problem.examples, null, 2)}</pre>
+                        {parsedTags.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                {parsedTags.map((tag) => (
+                                    <span key={tag} className="chip rounded-full px-3 py-1 text-xs font-semibold">
+                                        {tag}
+                                    </span>
+                                ))}
                             </div>
                         )}
-                    </div>
+                    </header>
 
-                    <div className="mt-8">
-                        <h3 className="font-semibold mb-2">Constraints:</h3>
-                        <ul className="list-disc list-inside space-y-1">
-                            {parsedConstraints.map((c, i) => (
-                                <li key={i} className="font-mono text-sm">{c}</li>
-                            ))}
-                        </ul>
-                    </div>
-                </motion.div>
+                    {problemSections.slice(0, visibleSections).map((section) => (
+                        <article key={section.key} className="surface-card rounded-2xl border p-5 sm:p-6">
+                            <h2 className="mb-4 text-xl font-bold text-[#fff8eb]">{section.title}</h2>
+                            {section.body}
+                        </article>
+                    ))}
 
-                {/* Right Panel: Code Editor */}
-                <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex-1 flex flex-col gap-4"
+                    {hasMoreSections && (
+                        <div
+                            ref={loadMoreRef}
+                            className="surface-muted flex flex-col items-center gap-3 rounded-xl border p-4 text-center"
+                        >
+                            <p className="text-sm text-[var(--omni-text-muted)]">Scroll to load the next section.</p>
+                            <button
+                                onClick={() => setVisibleSections((prev) => Math.min(prev + 1, problemSections.length))}
+                                className="btn-secondary rounded-lg px-4 py-2 text-sm font-semibold"
+                            >
+                                Load Next Section
+                            </button>
+                        </div>
+                    )}
+                </motion.section>
+
+                <motion.section
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-4 lg:col-span-7 xl:col-span-8 lg:sticky lg:top-20 lg:self-start"
                 >
-                    <div className={`flex-1 rounded-xl shadow-lg border overflow-hidden flex flex-col ${darkMode ? "bg-[#1e1e1e] border-gray-700" : "bg-white border-gray-200"}`}>
-                        <div className={`px-4 py-2 border-b flex justify-between items-center ${darkMode ? "bg-[#2d2d2d] border-gray-700" : "bg-gray-50 border-gray-200"}`}>
+                    <div className="surface-card flex min-h-0 flex-col overflow-hidden rounded-2xl border">
+                        <div className="surface-muted flex items-center justify-between gap-4 border-b border-[var(--omni-border)] px-4 py-3">
                             <div className="flex items-center gap-2">
-                                <span className={`text-xs font-semibold uppercase tracking-wider ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Language:</span>
+                                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--omni-text-muted)]">Language</span>
                                 <select
                                     value={language}
-                                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setLanguage(e.target.value)}
-                                    className={`px-2 py-1 rounded-md text-sm font-mono focus:outline-none border ${darkMode
-                                        ? "bg-[#1e1e1e] border-gray-600 text-gray-200 hover:bg-[#2a2a2a]"
-                                        : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                                        }`}
+                                    onChange={handleLanguageChange}
+                                    className="rounded-md bg-[var(--omni-surface-strong)] px-2 py-1 font-mono text-sm"
                                 >
                                     {languages.map((lang) => (
-                                        <option key={lang.id} value={lang.id}>
-                                            {lang.name}
-                                        </option>
+                                        <option key={lang.id} value={lang.id}>{lang.name}</option>
                                     ))}
                                 </select>
                             </div>
-                            <span className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                Input is JSON on stdin. Print JSON/plain output to stdout.
-                            </span>
+                            <span className="text-xs text-[var(--omni-text-muted)]">stdin accepts JSON. print to stdout.</span>
                         </div>
-                        <div className="flex-1 relative">
+
+                        <div className="relative h-[60vh] min-h-[430px] xl:h-[66vh]">
                             {!user && (
-                                <div className="absolute inset-0 bg-black bg-opacity-50 z-10 flex items-center justify-center">
-                                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg text-center">
-                                        <h2 className="text-xl font-bold mb-4">Please Log In to Code</h2>
-                                        <p className="mb-4">You need to be logged in to use the code editor.</p>
+                                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60">
+                                    <div className="surface-card rounded-xl p-6 text-center">
+                                        <h2 className="mb-3 text-xl font-bold text-[#fff8eb]">Log In to Use the Editor</h2>
+                                        <p className="mb-4 text-[var(--omni-text-muted)]">Sign in to run and submit your solution.</p>
                                         <button
-                                            onClick={() => window.location.href = '/login'}
-                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                            onClick={() => navigate('/login')}
+                                            className="btn-primary rounded-lg px-4 py-2"
                                         >
                                             Go to Login
                                         </button>
                                     </div>
                                 </div>
                             )}
+
                             <Editor
                                 height="100%"
                                 language={language}
-                                theme={darkMode ? "vs-dark" : "light"}
+                                theme="vs-dark"
                                 value={code}
                                 onChange={(value) => setCode(value || "")}
                                 onMount={(editor) => {
@@ -268,37 +495,71 @@ const StartCodingPage: React.FC = () => {
                                     fontSize: 14,
                                     automaticLayout: true,
                                     scrollBeyondLastLine: true,
+                                    lineNumbersMinChars: 3,
+                                    padding: { top: 14 },
                                 }}
                             />
                         </div>
                     </div>
-                    {!user ? null : (
-                        <div className={`p-4 rounded-xl shadow-lg border ${darkMode ? "bg-[#23272f] border-gray-700 text-gray-300" : "bg-gray-50 border-gray-200 text-gray-800"}`}>
-                            <label className="block text-sm font-semibold mb-2">Custom Input (stdin)</label>
-                            <textarea
-                                value={customInput}
-                                onChange={(e) => setCustomInput(e.target.value)}
-                                rows={4}
-                                className={`w-full p-2 rounded-md font-mono text-sm border ${darkMode ? "bg-[#1e1e1e] border-gray-600 text-gray-200" : "bg-white border-gray-300 text-gray-800"}`}
-                                placeholder='Example: {"n":2}'
-                            />
+
+                    <div className="surface-card rounded-2xl border p-4">
+                        <div className="mb-3 flex items-center gap-2">
+                            <button
+                                onClick={() => setActiveWorkspaceTab("console")}
+                                className={`rounded-lg px-3 py-2 text-sm font-semibold ${activeWorkspaceTab === "console" ? "chip-active" : "chip"}`}
+                            >
+                                Console
+                            </button>
+                            <button
+                                onClick={() => setActiveWorkspaceTab("input")}
+                                className={`rounded-lg px-3 py-2 text-sm font-semibold ${activeWorkspaceTab === "input" ? "chip-active" : "chip"}`}
+                            >
+                                Input (stdin)
+                            </button>
                         </div>
-                    )}
-                    {!user ? null : output ? (
-                        <><div className={`p-4 rounded-xl shadow-lg border h-32 overflow-y-auto font-mono text-sm whitespace-pre-wrap ${darkMode ? "bg-[#23272f] border-gray-700 text-gray-300" : "bg-gray-50 border-gray-200 text-gray-800"}`}>
-                            {output}
-                        </div></>
-                    ) : null}
-                    {!user ? null : <div className="flex justify-end gap-3">
-                        <button onClick={handleRun}
-                            className={`px-6 py-2 rounded-lg font-semibold transition-colors ${darkMode ? "bg-gray-700 hover:bg-gray-600 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-900"}`}>
-                            Run Code
+
+                        {activeWorkspaceTab === "input" && (
+                            <div>
+                                <textarea
+                                    value={customInput}
+                                    onChange={(event) => setCustomInput(event.target.value)}
+                                    rows={6}
+                                    className="px-3 py-2 font-mono text-sm"
+                                    placeholder='Example: {"n":2}'
+                                />
+
+                                {engineMessage && (
+                                    <div className="mt-3 rounded-lg border border-[var(--omni-danger)]/40 bg-[rgba(248,113,113,0.08)] p-3 text-sm text-[var(--omni-danger)]">
+                                        {engineMessage}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeWorkspaceTab === "console" && (
+                            <div className="surface-muted min-h-44 max-h-72 overflow-y-auto rounded-xl border p-3 font-mono text-sm whitespace-pre-wrap text-[var(--omni-text-muted)]">
+                                {output || "Run code to see output."}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={handleRun}
+                            className="btn-secondary rounded-lg px-6 py-3 font-semibold"
+                            disabled={!user || isRunning}
+                        >
+                            {isRunning ? "Running..." : "Run Code"}
                         </button>
-                        <button onClick={handleSubmit} className="px-6 py-2 rounded-lg font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors">
-                            Submit
+                        <button
+                            onClick={handleSubmit}
+                            className="btn-primary rounded-lg px-7 py-3 text-base"
+                            disabled={!user || isSubmitting}
+                        >
+                            {isSubmitting ? "Submitting..." : "Submit"}
                         </button>
-                    </div>}
-                </motion.div>
+                    </div>
+                </motion.section>
             </div>
         </Layout>
     );

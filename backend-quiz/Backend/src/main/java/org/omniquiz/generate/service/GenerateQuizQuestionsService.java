@@ -77,15 +77,58 @@ public class GenerateQuizQuestionsService {
     }
 
     private Integer mapAnswerToIndex(String answer, List<String> options) {
-        if (answer == null || options == null)
+        if (answer == null || options == null || options.isEmpty())
             return null;
-        // Assume answer like "b" or "Option 2"
-        String lowerAnswer = answer.toLowerCase().trim();
-        if (lowerAnswer.matches("[a-d]")) {
-            return lowerAnswer.charAt(0) - 'a'; // a→0, b→1, etc.
+
+        String trimmedAnswer = answer.trim();
+        if (trimmedAnswer.isEmpty()) {
+            return null;
         }
-        // Fallback: find matching text
-        return options.indexOf(answer);
+
+        Matcher leadingLetter = Pattern.compile("^\\s*([a-dA-D])\\s*[\\).:-]?").matcher(trimmedAnswer);
+        if (leadingLetter.find()) {
+            int idx = Character.toLowerCase(leadingLetter.group(1).charAt(0)) - 'a';
+            if (idx >= 0 && idx < options.size()) {
+                return idx;
+            }
+        }
+
+        Matcher optionLetter = Pattern.compile("\\boption\\s*([a-dA-D])\\b", Pattern.CASE_INSENSITIVE).matcher(trimmedAnswer);
+        if (optionLetter.find()) {
+            int idx = Character.toLowerCase(optionLetter.group(1).charAt(0)) - 'a';
+            if (idx >= 0 && idx < options.size()) {
+                return idx;
+            }
+        }
+
+        Matcher optionNumber = Pattern.compile("\\b([1-4])\\b").matcher(trimmedAnswer);
+        if (optionNumber.find()) {
+            int idx = Integer.parseInt(optionNumber.group(1)) - 1;
+            if (idx >= 0 && idx < options.size()) {
+                return idx;
+            }
+        }
+
+        String normalizedAnswer = normalizeOptionText(trimmedAnswer);
+        for (int i = 0; i < options.size(); i++) {
+            if (normalizeOptionText(options.get(i)).equals(normalizedAnswer)) {
+                return i;
+            }
+        }
+
+        return null;
+    }
+
+    private String normalizeOptionText(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value
+                .toLowerCase()
+                .replaceFirst("^\\s*[a-d]\\s*[\\).:-]?\\s*", "")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     public List<GeneratedQuizQuestionsDTO> generateContent(String prompt) {

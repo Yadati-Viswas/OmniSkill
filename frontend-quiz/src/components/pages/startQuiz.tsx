@@ -2,7 +2,6 @@ import React, { useState, ChangeEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { customAlphabet } from 'nanoid';
 import Layout from "../Layout";
-import { useDarkMode } from "../../contexts/DarkModeContextProvider";
 import { getQuizQuestionsApi } from "../../apis/allApis";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -12,19 +11,19 @@ const categories: string[] = [
     "HTML", "History", "JavaScript", "Java", "Python", "Math",
     "Physics", "C++", "Linux", "Biology", "Art",
     "Statistics", "Algo & DS", "Movies", "Sports",
-    "Philosophy", "General Knowledge", "AI", "Quiz for Kids", "Literature"];
+    "Philosophy", "General Knowledge", "AI", "Quiz for Kids", "Literature"
+];
 categories.sort();
 const difficulties: string[] = ["Easy", "Medium", "Hard"];
 
 const StartQuizPage: React.FC = () => {
-    const { darkMode } = useDarkMode();
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [showPopup, setShowPopup] = useState<boolean>(false);
     const [selectedDifficulty, setSelectedDifficulty] = useState<string>("");
     const [quizRefferal, setQuizRefferal] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(false);
     const [numberOfQuestions, setNumberOfQuestions] = useState<number>(5);
-    const Navigate = useNavigate();
+    const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
 
     const handleCategoryClick = (cat?: string): void => {
@@ -33,10 +32,11 @@ const StartQuizPage: React.FC = () => {
                 alert("Please enter or select a valid category");
                 return;
             }
-            console.log("Selected Category:", selectedCategory);
             setSelectedCategory(selectedCategory);
+        } else {
+            setSelectedCategory(cat);
         }
-        else setSelectedCategory(cat);
+
         setShowPopup(true);
         setSelectedDifficulty("");
     };
@@ -44,19 +44,24 @@ const StartQuizPage: React.FC = () => {
     const handleStartQuiz = async (): Promise<void> => {
         setShowPopup(false);
         setLoading(true);
+
         let finalReferral = quizRefferal?.trim();
         if (!finalReferral) {
             finalReferral = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 8)();
             setQuizRefferal(finalReferral);
-            console.log("Generated Referral:", finalReferral);
         }
-        const referral = finalReferral;
-        console.log("referral used:", referral);
-        alert(`Starting ${selectedCategory} quiz (${selectedDifficulty})`);
-        const response = await getQuizQuestionsApi(selectedCategory || "", selectedDifficulty, numberOfQuestions, referral);
-        setLoading(false);
-        console.log("API Response:", response.data);
-        Navigate('/quiz-started', { state: { generatedResponse: response.data } });
+
+        try {
+            const response = await getQuizQuestionsApi(
+                selectedCategory || "",
+                selectedDifficulty,
+                numberOfQuestions,
+                finalReferral
+            );
+            navigate('/quiz-started', { state: { generatedResponse: response.data } });
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (loading) {
@@ -66,41 +71,41 @@ const StartQuizPage: React.FC = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
-                    className={`flex flex-col items-center space-y-8 ${darkMode ? "text-white" : "text-gray-900"}`}>
-                    <h1 className="text-4xl font-bold mb-4">Loading...</h1>
+                    className="flex flex-col items-center space-y-8"
+                >
+                    <h1 className="page-title">Loading...</h1>
                 </motion.section>
             </Layout>
-        )
+        );
     }
 
     return (
         <Layout>
-
             <motion.section
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className={`flex flex-col items-center space-y-8 ${darkMode ? "text-white" : "text-gray-900"}`}
+                className="flex flex-col items-center space-y-8"
             >
-                <h1 className="text-4xl font-bold mb-4">Choose a Category</h1>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-4xl">
+                <h1 className="page-title text-center">Choose a Category</h1>
+                <div className="grid w-full max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {categories.map((cat) => (
-                        <motion.div
+                        <motion.button
                             key={cat}
-                            whileHover={{ scale: 1.05, boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}
-                            whileTap={{ scale: 0.97 }}
-                            className={`cursor-pointer rounded-xl p-6 text-center font-semibold transition
-                ${darkMode ? "bg-[#23272f] hover:bg-indigo-900" : "bg-white hover:bg-blue-100"}
-                shadow-md`}
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="surface-card rounded-2xl p-5 text-center text-base font-semibold text-[#fff8eb] hover:border-[var(--omni-accent)]"
                             onClick={() => {
                                 if (!isAuthenticated) {
                                     toast.error("You must be logged in to start a quiz.");
-                                    Navigate("/login");
+                                    navigate("/login");
                                     return;
-                                } handleCategoryClick(cat)
-                            }} >
+                                }
+                                handleCategoryClick(cat);
+                            }}
+                        >
                             {cat}
-                        </motion.div>
+                        </motion.button>
                     ))}
                 </div>
             </motion.section>
@@ -108,44 +113,44 @@ const StartQuizPage: React.FC = () => {
             <AnimatePresence>
                 {showPopup && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
+                        initial={{ opacity: 0, scale: 0.94 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+                        exit={{ opacity: 0, scale: 0.94 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4"
                     >
                         <motion.div
                             initial={{ y: 40 }}
                             animate={{ y: 0 }}
                             exit={{ y: 40 }}
-                            className={`rounded-xl p-8 w-full max-w-sm
-                ${darkMode ? "bg-[#23272f] text-white" : "bg-white text-gray-900"}
-                shadow-2xl`} >
-                            <div className="flex items-center">
-                                <h2 className="text-xl font-bold px-1 mb-4">Selected Category:</h2>
-                                <div className="mb-4 font-bold text-xl">{selectedCategory}</div>
-                            </div>
-                            <div className="mb-6">
-                                <label className="block mb-2 font-medium">Enter Number of questions: </label>
-                                <input type="number" min="5" max="100" defaultValue="5" className={`w-full p-3 rounded-lg border 
-                  ${darkMode ? "bg-[#23272f] border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"} 
-                  focus:outline-none focus:ring-2 focus:ring-blue-500`} onChange={(e: ChangeEvent<HTMLInputElement>) => setNumberOfQuestions(Number(e.target.value))} />
-                                <span className={`${darkMode ? "text-white" : "text-black"} text-sm`}>Max Questions:100, Min Questions:5</span>
+                            className="surface-card w-full max-w-md rounded-2xl p-6"
+                        >
+                            <div className="mb-5">
+                                <p className="text-sm font-medium text-[var(--omni-text-muted)]">Selected Category</p>
+                                <h2 className="mt-1 text-2xl font-bold text-[#fff8eb]">{selectedCategory}</h2>
                             </div>
 
-                            <div className="mb-6">
-                                <label className="block mb-2 font-medium">Choose Difficulty:</label>
-                                <div className="flex space-x-3">
+                            <div className="mb-5">
+                                <label className="form-label mb-2 block">Number of Questions</label>
+                                <input
+                                    type="number"
+                                    min="5"
+                                    max="100"
+                                    defaultValue="5"
+                                    className="px-3 py-3"
+                                    onChange={(e: ChangeEvent<HTMLInputElement>) => setNumberOfQuestions(Number(e.target.value))}
+                                />
+                                <span className="mt-2 block text-xs text-[var(--omni-text-muted)]">Max: 100, Min: 5</span>
+                            </div>
+
+                            <div className="mb-5">
+                                <label className="form-label mb-2 block">Difficulty</label>
+                                <div className="flex flex-wrap gap-2">
                                     {difficulties.map((diff) => (
                                         <button
                                             key={diff}
-                                            className={`px-4 py-2 rounded-full border font-semibold transition
-                        ${selectedDifficulty === diff
-                                                    ? darkMode
-                                                        ? "bg-indigo-700 text-white border-indigo-700"
-                                                        : "bg-blue-500 text-white border-blue-500"
-                                                    : darkMode
-                                                        ? "bg-[#23272f] text-indigo-200 border-indigo-700"
-                                                        : "bg-white text-blue-700 border-blue-500"
+                                            className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${selectedDifficulty === diff
+                                                    ? "chip-active"
+                                                    : "chip"
                                                 }`}
                                             onClick={() => setSelectedDifficulty(diff)}
                                         >
@@ -154,33 +159,24 @@ const StartQuizPage: React.FC = () => {
                                     ))}
                                 </div>
                             </div>
-                            <div className="flex flex-col mb-6">
-                                <label className="text-xl font-bold px-1 mb-2">
-                                    Quiz Referral:
-                                </label>
+
+                            <div className="mb-6">
+                                <label className="form-label mb-2 block">Quiz Referral (optional)</label>
                                 <input
                                     type="text"
-                                    placeholder="Quiz Referral (optional)"
+                                    placeholder="Quiz referral"
                                     value={quizRefferal}
                                     onChange={(e: ChangeEvent<HTMLInputElement>) => setQuizRefferal(e.target.value)}
-                                    className={`w-full p-3 rounded-lg border ${darkMode ? "bg-[#23272f] border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                    className="px-3 py-3"
                                 />
                             </div>
-                            <div className="flex justify-end space-x-3">
-                                <button
-                                    className={`px-4 py-2 rounded font-semibold ${darkMode ? "bg-indigo-600 text-white" : "bg-blue-600 text-white"}`}
-                                    onClick={() => setShowPopup(false)}
-                                >
+
+                            <div className="flex justify-end gap-3">
+                                <button className="btn-secondary rounded-lg px-4 py-2 font-semibold" onClick={() => setShowPopup(false)}>
                                     Cancel
                                 </button>
                                 <button
-                                    className={`px-4 py-2 rounded font-semibold
-                    ${selectedDifficulty
-                                            ? darkMode
-                                                ? "bg-indigo-600 text-white"
-                                                : "bg-blue-600 text-white"
-                                            : "bg-gray-400 text-gray-100 cursor-not-allowed"
-                                        }`}
+                                    className="btn-primary rounded-lg px-4 py-2"
                                     disabled={!selectedDifficulty}
                                     onClick={handleStartQuiz}
                                 >
@@ -191,38 +187,32 @@ const StartQuizPage: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-            <motion.div className={`px-6 py-6 mt-8 ${darkMode ? "bg-[#1f2937] border-t border-gray-700" : "bg-gray-50 border-t border-gray-200"}`}>
-                <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <p className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"} flex-1`}>
-                        Couldn't find a category you like? Enter a category you want to start.
+
+            <motion.div className="surface-muted mt-10 rounded-2xl border p-6">
+                <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-[var(--omni-text-muted)]">
+                        Couldn&apos;t find your preferred category? Add one and start instantly.
                     </p>
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div className="flex w-full items-center gap-3 sm:w-auto">
                         <motion.input
                             type="text"
                             placeholder="Enter category"
-                            className={`flex-1 px-4 py-2 rounded-lg min-w-0
-                ${darkMode
-                                    ? "bg-[#374151] text-white placeholder-gray-400 border border-gray-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                                    : "bg-white text-gray-900 placeholder-gray-500 border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                }`}
+                            className="min-w-0 flex-1 px-4 py-2 sm:w-56"
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setSelectedCategory(e.target.value)}
                         />
                         <motion.button
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className={`px-6 py-2 rounded-lg font-semibold whitespace-nowrap
-                ${darkMode
-                                    ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                                    : "bg-blue-600 text-white hover:bg-blue-700"
-                                } transition-colors`}
+                            className="btn-primary rounded-lg px-6 py-2"
                             onClick={() => {
                                 if (!isAuthenticated) {
                                     toast.error("You must be logged in to start a quiz.");
-                                    Navigate("/login");
+                                    navigate("/login");
                                     return;
                                 }
-                                handleCategoryClick()
-                            }} >
+                                handleCategoryClick();
+                            }}
+                        >
                             Start Quiz
                         </motion.button>
                     </div>
@@ -230,6 +220,6 @@ const StartQuizPage: React.FC = () => {
             </motion.div>
         </Layout>
     );
-}
+};
 
 export default StartQuizPage;

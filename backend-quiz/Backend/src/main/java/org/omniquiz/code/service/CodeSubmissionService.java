@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.StringJoiner;
 
 @Service
 public class CodeSubmissionService {
@@ -66,27 +67,42 @@ public class CodeSubmissionService {
 
                 String stderr = execResp.getStderr();
                 String compile = execResp.getCompileOutput();
+                String message = execResp.getMessage();
                 String status = execResp.getStatus() != null ? execResp.getStatus().getDescription() : null;
 
+                StringJoiner errorJoiner = new StringJoiner(" | ");
                 if (status != null && !status.isBlank() && !"Accepted".equalsIgnoreCase(status)) {
-                    result.setError("Status: " + status);
+                    errorJoiner.add("Status: " + status);
+                }
+                if (message != null && !message.isBlank()) {
+                    errorJoiner.add("Message: " + message.trim());
                 }
                 if (compile != null && !compile.isBlank()) {
-                    result.setError("Compile Output: " + compile.trim());
+                    errorJoiner.add("Compile Output: " + compile.trim());
                 }
                 if (stderr != null && !stderr.isBlank()) {
-                    result.setError("Stderr: " + stderr.trim());
+                    errorJoiner.add("Stderr: " + stderr.trim());
+                }
+                String errorText = errorJoiner.toString();
+                if (!errorText.isBlank()) {
+                    result.setError(errorText);
                 }
 
                 boolean ok = compare(expectedStr, actual)
                         && (stderr == null || stderr.isBlank())
                         && (compile == null || compile.isBlank())
+                        && (message == null || message.isBlank())
                         && (status == null || "Accepted".equalsIgnoreCase(status));
                 result.setPassed(ok);
                 if (ok) {
                     passed++;
                 }
             } catch (Exception e) {
+                if (e instanceof ResponseStatusException responseStatusException
+                        && (responseStatusException.getStatusCode().is5xxServerError()
+                                || responseStatusException.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE)) {
+                    throw responseStatusException;
+                }
                 logger.error("Execution failed for test case {}", i + 1, e);
                 result.setPassed(false);
                 result.setError(e.getMessage());

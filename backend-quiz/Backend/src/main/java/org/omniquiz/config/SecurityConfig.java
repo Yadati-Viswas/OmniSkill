@@ -53,6 +53,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())).csrf().disable()
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/", "/index.html", "/assets/**", "/favicon.ico", "/logo.svg").permitAll()
                         .requestMatchers("/v1-api/auth/**").permitAll()
                         .requestMatchers("/v1-api/quiz/**").authenticated()
                         .requestMatchers("/v1-api/code/**").authenticated()
